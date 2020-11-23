@@ -109,7 +109,7 @@ DeviceQueueIndices AppBase::findDeviceQueue(VkPhysicalDevice physical_device) {
 			indices.graphics_queue_index = i;
 		}
 		VkBool32 presentSupport = false;
-		vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, surface, &presentSupport);
+		vkGetPhysicalDeviceSurfaceSupportKHR(physical_device, i, this->surface, &presentSupport);
 		if (presentSupport) {
 			indices.present_queue_index = i;
 		}
@@ -134,23 +134,46 @@ bool AppBase::checkDeviceExtensionSupport(VkPhysicalDevice physical_device) {
 	}
 	return requiredExtensions.empty();
 }
+SwapChainSupportDetails AppBase::querySwapChainSupport(VkPhysicalDevice device) {
+	SwapChainSupportDetails details;
+
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, this->surface, &details.capabilities);
+
+	uint32_t formatCount;
+	vkGetPhysicalDeviceSurfaceFormatsKHR(device, this->surface, &formatCount, nullptr);
+
+	if (formatCount != 0) {
+		details.formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, this->surface, &formatCount, details.formats.data());
+	}
+
+	uint32_t presentModeCount;
+	vkGetPhysicalDeviceSurfacePresentModesKHR(device, this->surface, &presentModeCount, nullptr);
+
+	if (presentModeCount != 0) {
+		details.presentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, this->surface, &presentModeCount, details.presentModes.data());
+	}
+
+	return details;
+}
 bool AppBase::isDeviceSuitable(VkPhysicalDevice physical_device) {
 	uint32_t graphics_queue_index = UINT32_MAX;
 	uint32_t present_queue_index = UINT32_MAX;
 	DeviceQueueIndices indices = this->findDeviceQueue(physical_device);
 
-	bool extensionsSupported = this->checkDeviceExtensionSupport(physical_device);
+	bool extensions_supported = this->checkDeviceExtensionSupport(physical_device);
 
-	bool swapChainAdequate = false;
-	if (extensionsSupported) {
-		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+	bool swapchain_adequate = false;
+	if (extensions_supported) {
+		SwapChainSupportDetails swapchain_support = querySwapChainSupport(physical_device);
+		swapchain_adequate = !swapchain_support.formats.empty() && !swapchain_support.presentModes.empty();
 	}
 
-	VkPhysicalDeviceFeatures supportedFeatures;
-	vkGetPhysicalDeviceFeatures(physical_device, &supportedFeatures);
+	VkPhysicalDeviceFeatures supported_features;
+	vkGetPhysicalDeviceFeatures(physical_device, &supported_features);
 
-	return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+	return indices.isComplete() && extensions_supported && swapchain_adequate && supported_features.samplerAnisotropy;
 }
 static VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice physical_device) {
 	VkPhysicalDeviceProperties physicalDeviceProperties;
@@ -184,10 +207,11 @@ void AppBase::selectPhysicalDevice() {
 	if (this->physical_device == VK_NULL_HANDLE) {
 		throw std::runtime_error("failed to find a suitable GPU!");
 	}
+	DeviceQueueIndices indices = findDeviceQueue(this->physical_device);
+	this->graphics_queue_index = indices.graphics_queue_index.value();
+	this->present_queue_index = indices.present_queue_index.value();
 }
 void AppBase::createLogicalDevice() {
-	DeviceQueueIndices indices = findDeviceQueue(this->physical_device);
-
 	std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
 	std::set<uint32_t> unique_queue_families = { this->graphics_queue_index.value(),this->present_queue_index.value() };
 

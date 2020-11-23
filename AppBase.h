@@ -11,6 +11,7 @@
 #include <optional>
 
 #include "utils/DeviceQueueIndices.h"
+#include "utils/SwapchainSupportDetails.h"
 
 // è„éËÇ≠ÉNÉâÉXÇÌÇØÇµÇΩÇ¢ÇØÇ«ÇªÇÍÇºÇÍÇ™ñßê⁄Ç…ä÷åWÇµÇ∑Ç¨ÇƒÇƒÇÌÇ©ÇÁÇÒ
 
@@ -50,6 +51,7 @@ protected:
 	void selectPhysicalDevice();
 	DeviceQueueIndices findDeviceQueue(VkPhysicalDevice physical_device);
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
+	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 	bool isDeviceSuitable(VkPhysicalDevice physical_device);
 	VkDevice device;
 	void createLogicalDevice();
