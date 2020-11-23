@@ -3,13 +3,13 @@
 #include <stdexcept>
 
 void AppBase::initVulkan() {
+	this->createWindow();
 	this->createInstance();
 	// debug
 	this->createSurface();
 	this->createLogicalDevice();
 	this->createSwapchain();
 }
-
 void AppBase::cleanup() {
 
 	this->deleteSwapchain();
@@ -19,6 +19,20 @@ void AppBase::cleanup() {
 	this->deleteInstance();
 }
 
+// windowì¬
+void AppBase::createWindow() {
+	glfwInit();
+
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	this->window = glfwCreateWindow(window_width, window_height, "Vulkan", nullptr, nullptr);
+	glfwSetWindowUserPointer(this->window, this);
+	glfwSetFramebufferSizeCallback(this->window, framebufferResizeCallback);
+}
+// window‚ªƒŠƒTƒCƒY‚³‚ê‚½‚Æ‚«‚ÌcallbackŠÖ”
+void AppBase::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+	auto app = reinterpret_cast<AppBase*>(glfwGetWindowUserPointer(window));
+	app->framebuffer_resized = true;
+}
 void AppBase::createInstance() {
 	VkApplicationInfo app_info{};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;

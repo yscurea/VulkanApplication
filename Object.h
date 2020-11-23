@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "utils/Model.h"
 #include "utils/Buffer.h"
 #include "utils/Texture.h"
 
@@ -12,7 +13,9 @@ public:
 	VkDescriptorSet* getDescriptorSet();
 	Buffer* getUniformBuffer();
 	Texture* getTexture();
+	void draw(VkCommandBuffer command_buffer);
 private:
+	Model model;
 	VkDescriptorSet descriptor_set;
 	Buffer uniform_buffer;
 	Texture texture;

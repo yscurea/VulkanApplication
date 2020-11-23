@@ -12,6 +12,8 @@ class App : public AppBase {
 public:
 	void run();
 private:
+	Model unique_model;
+
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
 	void createGraphcisPipeline();

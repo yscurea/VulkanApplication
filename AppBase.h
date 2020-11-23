@@ -17,14 +17,20 @@ class AppBase
 public:
 	void initVulkan();
 	void cleanup();
+	int window_width = 800;
+	int window_height = 600;
 protected:
+	// -------------- window ----------------
+	GLFWwindow* window;
+	void createWindow();
+	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
+
 	// ------------- instance ---------------
 	VkInstance instance;
 	void createInstance();
 	void deleteInstance();
 
 	// ------------- surface ----------------
-	GLFWwindow* window;
 	VkSurfaceKHR surface;
 	void createSurface();
 	void deleteSurface();
