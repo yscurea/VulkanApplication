@@ -1,6 +1,7 @@
 #include "AppBase.h"
 
 #include <stdexcept>
+#include <set>
 
 void AppBase::initVulkan() {
 	this->createWindow();
@@ -78,6 +79,9 @@ void AppBase::createInstance() {
 		throw std::runtime_error("failed to create instance!");
 	}
 }
+void AppBase::deleteInstance() {
+	vkDestroyInstance(this->instance, nullptr);
+}
 
 // ------------------------------ surface ----------------------------------------
 void AppBase::createSurface() {
@@ -90,6 +94,101 @@ void AppBase::deleteSurface() {
 }
 
 // ------------------------------ device ----------------------------------------
-void AppBase::createLogicalDevice() {
+static void findDeviceQueue(VkPhysicalDevice physical_device) {
 
+}
+static bool isDeviceSuitable(VkPhysicalDevice physical_device) {
+	uint32_t graphics_queue_index = UINT32_MAX;
+	uint32_t present_queue_index = UINT32_MAX;
+	QueueFamilyIndices indices = findDeviceQueue(physical_device);
+
+	bool extensionsSupported = checkDeviceExtensionSupport(device);
+
+	bool swapChainAdequate = false;
+	if (extensionsSupported) {
+		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+		swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+	}
+
+	VkPhysicalDeviceFeatures supportedFeatures;
+	vkGetPhysicalDeviceFeatures(physical_device, &supportedFeatures);
+
+	return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+}
+static VkSampleCountFlagBits getMaxUsableSampleCount(VkPhysicalDevice physical_device) {
+	VkPhysicalDeviceProperties physicalDeviceProperties;
+	vkGetPhysicalDeviceProperties(physical_device, &physicalDeviceProperties);
+
+	VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+	if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; }
+	if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; }
+	if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; }
+	if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; }
+	if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; }
+	if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; }
+
+	return VK_SAMPLE_COUNT_1_BIT;
+}
+void AppBase::selectPhysicalDevice() {
+	uint32_t deviceCount = 0;
+	vkEnumeratePhysicalDevices(this->instance, &deviceCount, nullptr);
+	if (deviceCount == 0) {
+		throw std::runtime_error("failed to find GPUs with Vulkan support!");
+	}
+	std::vector<VkPhysicalDevice> devices(deviceCount);
+	vkEnumeratePhysicalDevices(this->instance, &deviceCount, devices.data());
+	for (const auto& device : devices) {
+		if (isDeviceSuitable(device)) {
+			this->physical_device = device;
+			this->sample_count_falg_bits = getMaxUsableSampleCount(this->physical_device);
+			break;
+		}
+	}
+	if (this->physical_device == VK_NULL_HANDLE) {
+		throw std::runtime_error("failed to find a suitable GPU!");
+	}
+}
+void AppBase::createLogicalDevice() {
+	QueueFamilyIndices indices = findDeviceQueue(this->physical_device);
+
+	std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+	float queuePriority = 1.0f;
+	for (uint32_t queueFamily : uniqueQueueFamilies) {
+		VkDeviceQueueCreateInfo queueCreateInfo{};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfos.push_back(queueCreateInfo);
+	}
+
+	VkPhysicalDeviceFeatures device_features{};
+	device_features.samplerAnisotropy = VK_TRUE;
+
+	VkDeviceCreateInfo create_info{};
+	create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+	create_info.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+	create_info.pQueueCreateInfos = queueCreateInfos.data();
+
+	create_info.pEnabledFeatures = &device_features;
+
+	create_info.enabledExtensionCount = static_cast<uint32_t>(this->device_extensions.size());
+	create_info.ppEnabledExtensionNames = this->device_extensions.data();
+
+#ifdef _DEBUG
+	create_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
+	create_info.ppEnabledLayerNames = validation_layers.data();
+#else
+	createInfo.enabledLayerCount = 0;
+#endif
+
+	if (vkCreateDevice(this->physical_device, &create_info, nullptr, &device) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create logical device!");
+	}
+
+	vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &this->graphics_queue);
+	vkGetDeviceQueue(device, indices.presentFamily.value(), 0, &this->present_queue);
 }
