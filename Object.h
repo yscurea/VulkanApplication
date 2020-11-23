@@ -11,13 +11,12 @@
 
 class Object {
 public:
-	VkDescriptorSet* getDescriptorSet();
-	Buffer* getUniformBuffer();
-	Texture* getTexture();
 	void draw(VkCommandBuffer command_buffer);
-	// 共通のモデルを使用するときに使う
-	void setModel(Model* model);
-	void loadModel(std::string model_path);
+	void allocateDescriptorSets(VkDevice& device, VkDescriptorSetAllocateInfo allocate_info);
+	void bindDescriptorSets(VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout);
+	void setModel(Model* model); // 共通のモデルを使用するときに使う
+	void loadModel(std::string model_path); // 新規読み込みに使う
+	void updateUniformBuffer();
 private:
 	Model* model;
 	VkDescriptorSet descriptor_set;

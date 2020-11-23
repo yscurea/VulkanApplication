@@ -13,6 +13,9 @@ public:
 	void run();
 private:
 	Model unique_model;
+	void loadModel();
+	uint32_t sphere_count = 100;
+	std::vector<Object*> spheres;
 
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
@@ -25,10 +28,6 @@ private:
 	std::vector<VkDescriptorSet> descriptor_sets;
 	void createDescriptorSets();
 
-	uint32_t sphere_count = 100;
-	std::vector<Object*> spheres;
-
-	void loadModel();
 	void prepareCommand();
 	void updateUniformBuffers();
 

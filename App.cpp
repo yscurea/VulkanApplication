@@ -13,6 +13,59 @@ void App::run() {
 	this->cleanup();
 }
 
+void App::render() {
+	vkWaitForFences(this->device, 1, &this->in_flight_fences[this->current_frame], VK_TRUE, UINT64_MAX);
+
+	uint32_t image_index;
+	VkResult result = vkAcquireNextImageKHR(this->device, this->swapchain, UINT64_MAX, this->image_available_semaphores[this->current_frame], VK_NULL_HANDLE, &image_index);
+
+	this->updateUniformBuffers();
+
+	VkSubmitInfo submit_info{};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+	VkSemaphore wait_semaphores[] = { this->image_available_semaphores[current_frame] };
+	VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+	submit_info.waitSemaphoreCount = 1;
+	submit_info.pWaitSemaphores = wait_semaphores;
+	submit_info.pWaitDstStageMask = wait_stages;
+
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &this->command_buffers[image_index];
+
+	VkSemaphore signal_semaphores[] = { this->render_finished_semaphores[current_frame] };
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores = signal_semaphores;
+
+	vkResetFences(this->device, 1, &this->in_flight_fences[current_frame]);
+
+	if (vkQueueSubmit(this->graphics_queue, 1, &submit_info, this->in_flight_fences[current_frame]) != VK_SUCCESS) {
+		throw std::runtime_error("failed to submit draw command buffer!");
+	}
+
+
+	VkPresentInfoKHR present_info{};
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores = signal_semaphores;
+
+	VkSwapchainKHR swapchains[] = { this->swapchain };
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = swapchains;
+
+	present_info.pImageIndices = &image_index;
+
+	VkResult result = vkQueuePresentKHR(this->present_queue, &present_info);
+
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || this->framebuffer_resized) {
+		this->framebuffer_resized = false;
+		this->recreateSwapchain();
+	}
+	else if (result != VK_SUCCESS) {
+		throw std::runtime_error("failed to present swap chain image!");
+	}
+}
 void App::cleanup() {
 	AppBase::cleanup();
 }
@@ -72,17 +125,14 @@ void App::createDescriptorSetLayout() {
 }
 void App::createDescriptorSets() {
 	for (auto& sphere : this->spheres) {
-		VkDescriptorSetAllocateInfo allocateInfo{};
-		allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocateInfo.descriptorPool = this->descriptor_pool;
-		allocateInfo.descriptorSetCount = 1;
-		allocateInfo.pSetLayouts = &this->descriptor_set_layout;
-		if (vkAllocateDescriptorSets(this->device, &allocateInfo, sphere->getDescriptorSet()) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate descriptor sets");
-		}
+		VkDescriptorSetAllocateInfo allocate_info{};
+		allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocate_info.descriptorPool = this->descriptor_pool;
+		allocate_info.descriptorSetCount = 1;
+		allocate_info.pSetLayouts = &this->descriptor_set_layout;
+		sphere->allocateDescriptorSets(this->device, allocate_info);
 
 		std::array<VkWriteDescriptorSet, 2> write_descriptor_sets{};
-
 		// Binding 0: RenderingObject uniform buffer
 		write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write_descriptor_sets[0].dstSet = *sphere->getDescriptorSet();
@@ -103,8 +153,10 @@ void App::createDescriptorSets() {
 	}
 }
 
-void updateUniformBuffers() {
-
+void App::updateUniformBuffers() {
+	for (auto sphere : this->spheres) {
+		sphere->updateUniformBuffer();
+	}
 }
 
 void App::prepareCommand() {
@@ -128,33 +180,31 @@ void App::prepareCommand() {
 		if (vkBeginCommandBuffer(this->command_buffers[i], &begin_info) != VK_SUCCESS) {
 			throw std::runtime_error("failed to begin recording command buffer!");
 		}
-		VkRenderPassBeginInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = this->render_pass;
-		renderPassInfo.framebuffer = this->swapchain_framebuffers[i];
-		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = this->swapchain_extent;
+		VkRenderPassBeginInfo render_pass_info{};
+		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		render_pass_info.renderPass = this->render_pass;
+		render_pass_info.framebuffer = this->swapchain_framebuffers[i];
+		render_pass_info.renderArea.offset = { 0, 0 };
+		render_pass_info.renderArea.extent = this->swapchain_extent;
 
 		std::array<VkClearValue, 2> clearValues{};
 		clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
 		clearValues[1].depthStencil = { 1.0f, 0 };
 
-		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-		renderPassInfo.pClearValues = clearValues.data();
+		render_pass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
+		render_pass_info.pClearValues = clearValues.data();
 
-		vkCmdBeginRenderPass(this->command_buffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(this->command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
 		vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
 
 		// 共通のモデルを使用する
-		unique_model.bindBuffers(this->command_buffers[i]);
+		this->unique_model.bindBuffers(this->command_buffers[i]);
 
 		// デスクリプタセットのみ各オブジェクト別に割り当てる
 		for (auto sphere : this->spheres) {
-			vkCmdBindDescriptorSets(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline_layout, 0, 1, &this->descriptorSets[i], 0, nullptr);
-
+			sphere->bindDescriptorSets(this->command_buffers[i], this->pipeline_layout);
 			sphere->draw(this->command_buffers[i]);
-			// vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
 		}
 
 		vkCmdEndRenderPass(this->command_buffers[i]);
@@ -167,56 +217,3 @@ void App::prepareCommand() {
 
 }
 
-void App::render() {
-	vkWaitForFences(this->device, 1, &this->in_flight_fences[this->current_frame], VK_TRUE, UINT64_MAX);
-
-	uint32_t image_index;
-	VkResult result = vkAcquireNextImageKHR(this->device, this->swapchain, UINT64_MAX, this->image_available_semaphores[this->current_frame], VK_NULL_HANDLE, &image_index);
-
-	this->updateUniformBuffers();
-
-	VkSubmitInfo submit_info{};
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-	VkSemaphore wait_semaphores[] = { this->image_available_semaphores[current_frame] };
-	VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-	submit_info.waitSemaphoreCount = 1;
-	submit_info.pWaitSemaphores = wait_semaphores;
-	submit_info.pWaitDstStageMask = wait_stages;
-
-	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &this->command_buffers[image_index];
-
-	VkSemaphore signal_semaphores[] = { this->render_finished_semaphores[current_frame] };
-	submit_info.signalSemaphoreCount = 1;
-	submit_info.pSignalSemaphores = signal_semaphores;
-
-	vkResetFences(this->device, 1, &this->in_flight_fences[current_frame]);
-
-	if (vkQueueSubmit(this->graphics_queue, 1, &submit_info, this->in_flight_fences[current_frame]) != VK_SUCCESS) {
-		throw std::runtime_error("failed to submit draw command buffer!");
-	}
-
-
-	VkPresentInfoKHR present_info{};
-	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores = signal_semaphores;
-
-	VkSwapchainKHR swapchains[] = { this->swapchain };
-	present_info.swapchainCount = 1;
-	present_info.pSwapchains = swapchains;
-
-	present_info.pImageIndices = &image_index;
-
-	VkResult result = vkQueuePresentKHR(this->present_queue, &present_info);
-
-	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || this->framebuffer_resized) {
-		this->framebuffer_resized = false;
-		this->recreateSwapchain();
-	}
-	else if (result != VK_SUCCESS) {
-		throw std::runtime_error("failed to present swap chain image!");
-	}
-}
