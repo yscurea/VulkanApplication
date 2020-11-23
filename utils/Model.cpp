@@ -47,3 +47,14 @@ void Model::load(std::string file_path) {
 		}
 	}
 }
+
+void Model::bindBuffers(VkCommandBuffer command_buffer) {
+	VkBuffer vertexBuffers[] = { this->vertex_buffer };
+	VkDeviceSize offsets[] = { 0 };
+	vkCmdBindVertexBuffers(command_buffer, 0, 1, vertexBuffers, offsets);
+	vkCmdBindIndexBuffer(command_buffer, this->index_buffer, 0, VK_INDEX_TYPE_UINT32);
+}
+
+void Model::drawIndex(VkCommandBuffer command_buffer) {
+	vkCmdDrawIndexed(command_buffer, static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
+}

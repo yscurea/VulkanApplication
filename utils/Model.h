@@ -9,6 +9,8 @@
 class Model {
 public:
 	void load(std::string file_path);
+	void bindBuffers(VkCommandBuffer command_buffer);
+	void drawIndex(VkCommandBuffer command_buffer);
 private:
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;

@@ -3,12 +3,29 @@
 #include <array>
 #include <stdexcept>
 
+void App::run() {
+	this->prepare();
+	while (!glfwWindowShouldClose(this->window)) {
+		glfwPollEvents();
+		this->render();
+	}
+	vkDeviceWaitIdle(this->device);
+	this->cleanup();
+}
+
+void App::cleanup() {
+	AppBase::cleanup();
+}
 void App::prepare() {
 	AppBase::initVulkan();
 }
 
 void App::loadModel() {
-
+	std::string model_file_path = "models/sphere.obj";
+	this->unique_model.load(model_file_path);
+	for (auto sphere : this->spheres) {
+		sphere->setModel(&unique_model);
+	}
 }
 
 void App::createDescriptorPool() {
@@ -129,12 +146,6 @@ void App::prepareCommand() {
 
 		vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
 
-		//VkBuffer vertexBuffers[] = { this->vertex_buffer };
-		//VkDeviceSize offsets[] = { 0 };
-		//vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
-
-		//vkCmdBindIndexBuffer(this->commandBuffers[i], this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
 		// ‹¤’Ê‚Ìƒ‚ƒfƒ‹‚ðŽg—p‚·‚é
 		unique_model.bindBuffers(this->command_buffers[i]);
 
@@ -142,7 +153,7 @@ void App::prepareCommand() {
 		for (auto sphere : this->spheres) {
 			vkCmdBindDescriptorSets(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline_layout, 0, 1, &this->descriptorSets[i], 0, nullptr);
 
-			sphere.draw(this->command_buffers[i]);
+			sphere->draw(this->command_buffers[i]);
 			// vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
 		}
 
@@ -208,16 +219,4 @@ void App::render() {
 	else if (result != VK_SUCCESS) {
 		throw std::runtime_error("failed to present swap chain image!");
 	}
-}
-
-void App::run() {
-	glfwInit();
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	this->window = glfwCreateWindow(800, 600, "Vulkan", nullptr, nullptr);
-	while (!glfwWindowShouldClose(this->window)) {
-		glfwPollEvents();
-		this->render();
-	}
-	glfwDestroyWindow(this->window);
-	glfwTerminate();
 }

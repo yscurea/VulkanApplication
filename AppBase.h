@@ -20,22 +20,23 @@ public:
 	int window_width = 800;
 	int window_height = 600;
 protected:
-	// -------------- window ----------------
+	// ------------------------------ window ----------------------------------------
 	GLFWwindow* window;
 	void createWindow();
+	void deleteWindow();
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
-	// ------------- instance ---------------
+	// ------------------------------ instance ----------------------------------------
 	VkInstance instance;
 	void createInstance();
 	void deleteInstance();
 
-	// ------------- surface ----------------
+	// ------------------------------ surface ----------------------------------------
 	VkSurfaceKHR surface;
 	void createSurface();
 	void deleteSurface();
 
-	// -------------- device ----------------
+	// ------------------------------ device ----------------------------------------
 	VkPhysicalDevice physical_device;
 	void selectPhysicalDevice();
 	VkDevice device;
@@ -46,7 +47,7 @@ protected:
 	uint32_t present_queue_index;
 
 
-	// --------------- swapchain ------------
+	// ------------------------------ swapchain ----------------------------------------
 	VkSwapchainKHR swapchain;
 	VkFormat swapchain_image_format;
 	void createSwapchain();
@@ -76,11 +77,11 @@ protected:
 	void createSyncObject();
 
 
-	// ------------- renderpass ------------
+	// ------------------------------ render pass ----------------------------------------
 	VkRenderPass render_pass;
 	void createRenderPass();
 
-	// ------------- command --------------
+	// ------------------------------ command ----------------------------------------
 	VkCommandPool command_pool;
 	void createCommandPool();
 	void deleteCommandPool();

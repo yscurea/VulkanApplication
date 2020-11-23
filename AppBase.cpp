@@ -12,6 +12,8 @@ void AppBase::initVulkan() {
 }
 void AppBase::cleanup() {
 
+	glfwDestroyWindow(this->window);
+	glfwTerminate();
 	this->deleteSwapchain();
 	// this->deleteLogicalDevice();
 	this->deleteSurface();
@@ -19,6 +21,11 @@ void AppBase::cleanup() {
 	this->deleteInstance();
 }
 
+
+
+
+
+// ------------------------------ window ----------------------------------------
 // windowçÏê¨
 void AppBase::createWindow() {
 	glfwInit();
@@ -33,6 +40,11 @@ void AppBase::framebufferResizeCallback(GLFWwindow* window, int width, int heigh
 	auto app = reinterpret_cast<AppBase*>(glfwGetWindowUserPointer(window));
 	app->framebuffer_resized = true;
 }
+void AppBase::deleteWindow() {
+	glfwDestroyWindow(this->window);
+	glfwTerminate();
+}
+// ------------------------------ instance ----------------------------------------
 void AppBase::createInstance() {
 	VkApplicationInfo app_info{};
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -66,11 +78,18 @@ void AppBase::createInstance() {
 		throw std::runtime_error("failed to create instance!");
 	}
 }
+
+// ------------------------------ surface ----------------------------------------
 void AppBase::createSurface() {
 	if (glfwCreateWindowSurface(this->instance, this->window, nullptr, &this->surface) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create window surface");
 	}
 }
+void AppBase::deleteSurface() {
+
+}
+
+// ------------------------------ device ----------------------------------------
 void AppBase::createLogicalDevice() {
 
 }

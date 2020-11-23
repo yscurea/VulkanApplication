@@ -28,12 +28,12 @@ private:
 	uint32_t sphere_count = 100;
 	std::vector<Object*> spheres;
 
-	void prepare();
 	void loadModel();
 	void prepareCommand();
-
 	void updateUniformBuffers();
 
+	void prepare();
 	void render();
+	void cleanup();
 };
 

@@ -13,6 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ヘッダー ファイル\utils">
+      <UniqueIdentifier>{53171498-e925-4cfd-8405-517c2eb5eafb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\utils">
+      <UniqueIdentifier>{b487f7b3-15b9-486f-90ee-bfa0bb749b9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\models">
+      <UniqueIdentifier>{ab6b0425-db24-4a69-97f7-b7500145d6b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\shaders">
+      <UniqueIdentifier>{aff13f82-8999-4146-b09a-9a1a6ed075bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="リソース ファイル\textures">
+      <UniqueIdentifier>{b0e700d2-1387-4f90-9d33-976c8325fec6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -24,12 +39,40 @@
     <ClCompile Include="App.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="utils\Initializer.cpp">
+    <ClCompile Include="Object.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\Buffer.cpp">
+      <Filter>ソース ファイル\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\Texture.cpp">
+      <Filter>ソース ファイル\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\Initializer.cpp">
+      <Filter>ソース ファイル\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\Model.cpp">
+      <Filter>ソース ファイル\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\Vertex.cpp">
+      <Filter>ソース ファイル\utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="shaders\frag.spv">
+      <Filter>リソース ファイル\shaders</Filter>
+    </None>
+    <None Include="shaders\shader.frag">
+      <Filter>リソース ファイル\shaders</Filter>
+    </None>
+    <None Include="shaders\shader.vert">
+      <Filter>リソース ファイル\shaders</Filter>
+    </None>
+    <None Include="shaders\vert.spv">
+      <Filter>リソース ファイル\shaders</Filter>
+    </None>
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBase.h">
@@ -38,8 +81,33 @@
     <ClInclude Include="App.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="utils\Initializer.h">
+    <ClInclude Include="Object.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="utils\Buffer.h">
+      <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\Texture.h">
+      <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\Initializer.h">
+      <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\Model.h">
+      <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\Vertex.h">
+      <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="models\sphere.obj">
+      <Filter>リソース ファイル\models</Filter>
+    </Object>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="textures\sample.png">
+      <Filter>リソース ファイル\textures</Filter>
+    </Image>
   </ItemGroup>
 </Project>
