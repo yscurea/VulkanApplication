@@ -37,6 +37,8 @@ protected:
 
 	// ------------------------------ debug ----------------------------------------
 	std::vector<const char*> validation_layers = { "VK_LAYER_KHRONOS_validation" };
+	void setupDebug();
+	void deleteDebug();
 
 
 	// ------------------------------ surface ----------------------------------------
@@ -68,8 +70,10 @@ protected:
 	void deleteSwapchain();
 	std::vector<VkImage> swapchain_images;
 	void createSwapchainImages();
+	void deleteSwapchainImages();
 	std::vector<VkImageView> swapchain_image_views;
 	void createSwapchainImageViews();
+	void deleteSwapchainImageViews();
 	VkExtent2D swapchain_extent;
 	// framebuffer
 	std::vector<VkFramebuffer> swapchain_framebuffers;
@@ -94,8 +98,8 @@ protected:
 	std::vector<VkSemaphore> render_finished_semaphores;
 	std::vector<VkFence> in_flight_fences;
 	std::vector<VkFence> images_in_flight;
-	void createSyncObject();
-	void deleteSyncObject();
+	void createSyncObjects();
+	void deleteSyncObjects();
 
 
 	// ------------------------------ render pass ----------------------------------------
