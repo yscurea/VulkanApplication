@@ -77,7 +77,7 @@ void App::loadModel() {
 	std::string model_file_path = "models/sphere.obj";
 	this->unique_model.load(model_file_path);
 	for (auto sphere : this->spheres) {
-		sphere->setModel(&unique_model);
+		sphere->setModel(&this->unique_model);
 	}
 }
 

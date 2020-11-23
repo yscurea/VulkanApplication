@@ -90,6 +90,7 @@ protected:
 	VkImage depth_image;
 	VkDeviceMemory depth_image_memory;
 	VkImageView depth_image_view;
+	VkFormat depth_image_format;
 	void createDepthResources();
 	void deleteDepthResources();
 

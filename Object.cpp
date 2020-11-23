@@ -19,3 +19,6 @@ void Object::allocateDescriptorSets(VkDevice& device, VkDescriptorSetAllocateInf
 		throw std::runtime_error("failed to allocate descriptor sets");
 	}
 }
+void Object::updateUniformBuffer() {
+
+}

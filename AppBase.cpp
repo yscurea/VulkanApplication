@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <set>
+#include <array>
 
 void AppBase::initVulkan() {
 	this->createWindow();
@@ -318,11 +319,18 @@ void AppBase::createSwapchain() {
 	this->swapchain_extent = extent;
 
 }
+void AppBase::deleteSwapchain() {
+	vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
+}
 void AppBase::createSwapchainImages() {
 
 }
+void AppBase::deleteSwapchainImages() {
+}
 void AppBase::createSwapchainImageViews() {
-
+	for (auto image_view : this->swapchain_image_views) {
+		vkDestroyImageView(this->device, image_view, nullptr);
+	}
 }
 void AppBase::createSwapchainFrameBuffers() {
 
@@ -331,6 +339,12 @@ void AppBase::createColorResources() {
 
 }
 void AppBase::createDepthResources() {
+	VkFormat depthFormat = this->findDepthFormat();
+
+	this->createImage(this->swapchain_extent.width, this->swapchain_extent.height, 1, this->sample_count_falg_bits, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->depth_image, this->depth_image_memory);
+	this->depth_image_view = this->createImageView(this->depth_image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+}
+void AppBase::deleteDepthResources() {
 
 }
 void AppBase::createSyncObjects() {
@@ -343,10 +357,80 @@ void AppBase::createSyncObjects() {
 
 // ------------------------------ render pass ----------------------------------------
 void AppBase::createRenderPass() {
+	VkAttachmentDescription color_attachment{};
+	color_attachment.format = this->swapchain_image_format;
+	color_attachment.samples = this->sample_count_falg_bits;
+	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentDescription depth_attachment{};
+	depth_attachment.format = this->findDepthFormat();
+	depth_attachment.samples = this->sample_count_falg_bits;
+	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentDescription color_attachment_resolve{};
+	color_attachment_resolve.format = this->swapchain_image_format;
+	color_attachment_resolve.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attachment_resolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment_resolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attachment_resolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment_resolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	color_attachment_resolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	color_attachment_resolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference color_attachment_ref{};
+	color_attachment_ref.attachment = 0;
+	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference depth_attachment_ref{};
+	depth_attachment_ref.attachment = 1;
+	depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference color_attachment_resolve_ref{};
+	color_attachment_resolve_ref.attachment = 2;
+	color_attachment_resolve_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass{};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &color_attachment_ref;
+	subpass.pDepthStencilAttachment = &depth_attachment_ref;
+	subpass.pResolveAttachments = &color_attachment_resolve_ref;
+
+	VkSubpassDependency dependency{};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+	std::array<VkAttachmentDescription, 3> attachments = { color_attachment, depth_attachment, color_attachment_resolve };
+	VkRenderPassCreateInfo renderPassInfo{};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+	renderPassInfo.pAttachments = attachments.data();
+	renderPassInfo.subpassCount = 1;
+	renderPassInfo.pSubpasses = &subpass;
+	renderPassInfo.dependencyCount = 1;
+	renderPassInfo.pDependencies = &dependency;
+
+	if (vkCreateRenderPass(this->device, &renderPassInfo, nullptr, &this->render_pass) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create render pass!");
+	}
 
 }
 void AppBase::deleteRenderPass() {
-
+	vkDestroyRenderPass(this->device, this->render_pass, nullptr);
 }
 
 
@@ -354,8 +438,47 @@ void AppBase::deleteRenderPass() {
 
 // ------------------------------ command ----------------------------------------
 void AppBase::createCommandPool() {
+	VkCommandPoolCreateInfo pool_info{};
+	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	pool_info.queueFamilyIndex = this->graphics_queue_index.value();
+	if (vkCreateCommandPool(this->device, &pool_info, nullptr, &this->command_pool) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create graphics command pool!");
+	}
+}
+void AppBase::deleteCommandPool() {
 
 }
 void AppBase::createCommandBuffers() {
+	this->command_buffers.resize(this->swapchain_framebuffers.size());
+
+	VkCommandBufferAllocateInfo alloc_info{};
+	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	alloc_info.commandPool = this->command_pool;
+	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	alloc_info.commandBufferCount = (uint32_t)this->command_buffers.size();
+
+	if (vkAllocateCommandBuffers(this->device, &alloc_info, this->command_buffers.data()) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate command buffers!");
+	}
+}
+void AppBase::deleteCommandBuffers() {
+
+}
+
+
+
+
+
+
+
+
+// ------------------------------ utils ----------------------------------------
+VkBuffer createBuffer() {
+
+}
+VkImage createImage() {
+
+}
+VkImageView createImageView() {
 
 }

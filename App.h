@@ -25,7 +25,6 @@ private:
 	void createDescriptorPool();
 	VkDescriptorSetLayout descriptor_set_layout;
 	void createDescriptorSetLayout();
-	std::vector<VkDescriptorSet> descriptor_sets;
 	void createDescriptorSets();
 
 	void prepareCommand();
