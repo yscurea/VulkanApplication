@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <set>
 #include <array>
+#include <algorithm>
 
 void AppBase::initVulkan() {
 	this->createWindow();
@@ -23,6 +24,120 @@ void AppBase::cleanup() {
 	// debug
 	this->deleteInstance();
 }
+
+
+// ------------------------------ utils ----------------------------------------
+uint32_t AppBase::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties(this->physical_device, &memProperties);
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+			return i;
+		}
+	}
+	throw std::runtime_error("failed to find suitable memory type!");
+}
+void AppBase::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+	VkBufferCreateInfo buffer_info{};
+	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_info.size = size;
+	buffer_info.usage = usage;
+	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateBuffer(this->device, &buffer_info, nullptr, &buffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create buffer!");
+	}
+
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(this->device, buffer, &memRequirements);
+
+	VkMemoryAllocateInfo alloc_info{};
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.allocationSize = memRequirements.size;
+	alloc_info.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+
+
+	if (vkAllocateMemory(this->device, &alloc_info, nullptr, &bufferMemory) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate buffer memory!");
+	}
+
+	vkBindBufferMemory(this->device, buffer, bufferMemory, 0);
+}
+void AppBase::createImage(uint32_t width, uint32_t height, uint32_t mip_levels, VkSampleCountFlagBits num_samples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_memory) {
+	VkImageCreateInfo image_info{};
+	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	image_info.imageType = VK_IMAGE_TYPE_2D;
+	image_info.extent.width = width;
+	image_info.extent.height = height;
+	image_info.extent.depth = 1;
+	image_info.mipLevels = mip_levels;
+	image_info.arrayLayers = 1;
+	image_info.format = format;
+	image_info.tiling = tiling;
+	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	image_info.usage = usage;
+	image_info.samples = num_samples;
+	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateImage(this->device, &image_info, nullptr, &image) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create image!");
+	}
+
+	VkMemoryRequirements mem_requirements;
+	vkGetImageMemoryRequirements(this->device, image, &mem_requirements);
+
+	VkMemoryAllocateInfo alloc_info{};
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.allocationSize = mem_requirements.size;
+	alloc_info.memoryTypeIndex = findMemoryType(mem_requirements.memoryTypeBits, properties);
+
+	if (vkAllocateMemory(this->device, &alloc_info, nullptr, &image_memory) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate image memory!");
+	}
+	vkBindImageMemory(this->device, image, image_memory, 0);
+}
+VkImageView AppBase::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags, uint32_t mip_levels) {
+	VkImageViewCreateInfo view_info{};
+	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	view_info.image = image;
+	view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	view_info.format = format;
+	view_info.subresourceRange.aspectMask = aspect_flags;
+	view_info.subresourceRange.baseMipLevel = 0;
+	view_info.subresourceRange.levelCount = mip_levels;
+	view_info.subresourceRange.baseArrayLayer = 0;
+	view_info.subresourceRange.layerCount = 1;
+
+	VkImageView imageView;
+	if (vkCreateImageView(this->device, &view_info, nullptr, &imageView) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture image view!");
+	}
+
+	return imageView;
+}
+
+VkFormat findSupportedFormat(VkPhysicalDevice physical_device, const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features) {
+	for (VkFormat format : candidates) {
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(physical_device, format, &props);
+		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+			return format;
+		}
+		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+			return format;
+		}
+	}
+	throw std::runtime_error("failed to find supported format!");
+}
+VkFormat findDepthFormat(VkPhysicalDevice physical_device) {
+	return findSupportedFormat(
+		physical_device,
+		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+	);
+}
+
 
 
 
@@ -268,12 +383,49 @@ void AppBase::createLogicalDevice() {
 
 
 // ------------------------------ swapchain ----------------------------------------
+static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) {
+	for (const auto& availableFormat : available_formats) {
+		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+			return availableFormat;
+		}
+	}
+
+	return available_formats[0];
+}
+static VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& available_present_modes) {
+	for (const auto& availablePresentMode : available_present_modes) {
+		if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+			return availablePresentMode;
+		}
+	}
+	return VK_PRESENT_MODE_FIFO_KHR;
+}
+static VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabilitiesKHR& capabilities) {
+	if (capabilities.currentExtent.width != UINT32_MAX) {
+		return capabilities.currentExtent;
+	}
+	else {
+		int width, height;
+		glfwGetFramebufferSize(window, &width, &height);
+
+		VkExtent2D actual_extent = {
+			static_cast<uint32_t>(width),
+			static_cast<uint32_t>(height)
+		};
+
+		actual_extent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actual_extent.width));
+		actual_extent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actual_extent.height));
+
+		return actual_extent;
+	}
+}
+
 void AppBase::createSwapchain() {
 	SwapChainSupportDetails swapchain_support = querySwapChainSupport(this->physical_device);
 
 	VkSurfaceFormatKHR surface_format = chooseSwapSurfaceFormat(swapchain_support.formats);
 	VkPresentModeKHR present_mode = chooseSwapPresentMode(swapchain_support.presentModes);
-	VkExtent2D extent = chooseSwapExtent(swapchain_support.capabilities);
+	VkExtent2D extent = chooseSwapExtent(this->window, swapchain_support.capabilities);
 
 	uint32_t image_count = swapchain_support.capabilities.minImageCount + 1;
 	if (swapchain_support.capabilities.maxImageCount > 0 && image_count > swapchain_support.capabilities.maxImageCount) {
@@ -351,7 +503,7 @@ void AppBase::deleteColorResources() {
 	vkFreeMemory(this->device, this->color_image_memory, nullptr);
 }
 void AppBase::createDepthResources() {
-	VkFormat depthFormat = this->findDepthFormat();
+	VkFormat depthFormat = findDepthFormat(this->physical_device);
 
 	createImage(this->swapchain_extent.width, this->swapchain_extent.height, 1, this->sample_count_falg_bits, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->depth_image, this->depth_image_memory);
 	this->depth_image_view = createImageView(this->depth_image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
@@ -382,7 +534,7 @@ void AppBase::createRenderPass() {
 	color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentDescription depth_attachment{};
-	depth_attachment.format = this->findDepthFormat();
+	depth_attachment.format = findDepthFormat(this->physical_device);
 	depth_attachment.samples = this->sample_count_falg_bits;
 	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -486,13 +638,3 @@ void AppBase::deleteCommandBuffers() {
 
 
 
-// ------------------------------ utils ----------------------------------------
-VkBuffer createBuffer() {
-
-}
-VkImage createImage() {
-
-}
-VkImageView createImageView() {
-
-}
