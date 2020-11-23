@@ -323,7 +323,6 @@ void AppBase::deleteSwapchain() {
 	vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
 }
 void AppBase::createSwapchainImages() {
-
 }
 void AppBase::deleteSwapchainImages() {
 }
@@ -332,20 +331,35 @@ void AppBase::createSwapchainImageViews() {
 		vkDestroyImageView(this->device, image_view, nullptr);
 	}
 }
+void AppBase::deleteSwapchainImageViews() {
+
+}
 void AppBase::createSwapchainFrameBuffers() {
 
+}
+void AppBase::deleteSwapchainFrameBuffers() {
+	for (auto framebuffer : this->swapchain_framebuffers) {
+		vkDestroyFramebuffer(this->device, framebuffer, nullptr);
+	}
 }
 void AppBase::createColorResources() {
 
 }
+void AppBase::deleteColorResources() {
+	vkDestroyImageView(this->device, this->color_image_view, nullptr);
+	vkDestroyImage(this->device, this->color_image, nullptr);
+	vkFreeMemory(this->device, this->color_image_memory, nullptr);
+}
 void AppBase::createDepthResources() {
 	VkFormat depthFormat = this->findDepthFormat();
 
-	this->createImage(this->swapchain_extent.width, this->swapchain_extent.height, 1, this->sample_count_falg_bits, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->depth_image, this->depth_image_memory);
-	this->depth_image_view = this->createImageView(this->depth_image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+	createImage(this->swapchain_extent.width, this->swapchain_extent.height, 1, this->sample_count_falg_bits, depthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->depth_image, this->depth_image_memory);
+	this->depth_image_view = createImageView(this->depth_image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 }
 void AppBase::deleteDepthResources() {
-
+	vkDestroyImageView(device, depth_image_view, nullptr);
+	vkDestroyImage(device, depth_image, nullptr);
+	vkFreeMemory(device, depth_image_memory, nullptr);
 }
 void AppBase::createSyncObjects() {
 
@@ -462,7 +476,7 @@ void AppBase::createCommandBuffers() {
 	}
 }
 void AppBase::deleteCommandBuffers() {
-
+	vkFreeCommandBuffers(this->device, this->command_pool, static_cast<uint32_t>(this->command_buffers.size()), this->command_buffers.data());
 }
 
 
