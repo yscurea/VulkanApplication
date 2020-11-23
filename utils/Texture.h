@@ -1,5 +1,10 @@
 #pragma once
 
-class Texture {
+#include <vulkan/vulkan.h>
 
+class Texture {
+public:
+	VkDescriptorImageInfo* getDescriptorImageInfo();
+private:
+	VkDescriptorImageInfo descriptor_image_info;
 };

@@ -50,7 +50,7 @@ protected:
 	std::vector<VkImageView> swapchain_image_views;
 	void createSwapchainImageViews();
 	VkExtent2D swapchain_extent;
-
+	// framebuffer
 	std::vector<VkFramebuffer> swapchain_framebuffers;
 	bool framebuffer_resized = false;
 	void createSwapchainFrameBuffers();
@@ -62,11 +62,12 @@ protected:
 	VkDeviceMemory depth_image_memory;
 	VkImageView depth_image_view;
 	void createDepthResources();
+	size_t current_frame = 0;
 	std::vector<VkSemaphore> image_available_semaphores;
 	std::vector<VkSemaphore> render_finished_semaphores;
 	std::vector<VkFence> in_flight_fences;
 	std::vector<VkFence> images_in_flight;
-	size_t current_frame = 0;
+	void createSyncObject();
 
 
 	// ------------- renderpass ------------
@@ -81,4 +82,3 @@ protected:
 	void createCommandBuffers();
 	void deleteCommandBuffers();
 };
-

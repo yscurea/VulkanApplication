@@ -2,9 +2,12 @@
 
 #include "AppBase.h"
 
-// todo : オブジェクトクラスを別ファイルに移動
-class Object {};
+#include "Object.h"
+#include "utils/Model.h"
 
+/// <summary>
+/// 球体の複数描画する
+/// </summary>
 class App : public AppBase {
 public:
 	void run();
@@ -20,6 +23,7 @@ private:
 	std::vector<VkDescriptorSet> descriptor_sets;
 	void createDescriptorSets();
 
+	uint32_t sphere_count = 100;
 	std::vector<Object*> spheres;
 
 	void prepare();

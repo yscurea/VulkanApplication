@@ -12,17 +12,18 @@ void App::loadModel() {
 }
 
 void App::createDescriptorPool() {
+	// 描画する球体の数だけユニフォームバッファとテクスチャサンプラーが作成される可能性がある
 	std::array<VkDescriptorPoolSize, 2> pool_sizes{};
 	pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	pool_sizes[0].descriptorCount = static_cast<uint32_t>(this->swapchain_images.size());
+	pool_sizes[0].descriptorCount = static_cast<uint32_t>(this->sphere_count);
 	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pool_sizes[1].descriptorCount = static_cast<uint32_t>(this->swapchain_images.size());
+	pool_sizes[1].descriptorCount = static_cast<uint32_t>(this->sphere_count);
 
 	VkDescriptorPoolCreateInfo pool_info{};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	pool_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
 	pool_info.pPoolSizes = pool_sizes.data();
-	pool_info.maxSets = static_cast<uint32_t>(swapchain_images.size());
+	pool_info.maxSets = static_cast<uint32_t>(this->swapchain_images.size() * this->sphere_count);
 
 	if (vkCreateDescriptorPool(this->device, &pool_info, nullptr, &this->descriptor_pool) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create descriptor pool!");
@@ -31,24 +32,24 @@ void App::createDescriptorPool() {
 void App::createDescriptorSetLayout() {
 	std::array<VkDescriptorSetLayoutBinding, 2> set_layout_bindings{};
 
-	// 定数バッファに使う
+	// 定数バッファのバインド
 	set_layout_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	set_layout_bindings[0].binding = 0;
 	set_layout_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	set_layout_bindings[0].descriptorCount = 1;
 
-	// テクスチャサンプラーに使う
+	// テクスチャサンプラーのバインド
 	set_layout_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	set_layout_bindings[1].binding = 1;
 	set_layout_bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 	set_layout_bindings[1].descriptorCount = 1;
 
-	VkDescriptorSetLayoutCreateInfo descriptorLayoutCI{};
-	descriptorLayoutCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	descriptorLayoutCI.bindingCount = static_cast<uint32_t>(set_layout_bindings.size());
-	descriptorLayoutCI.pBindings = set_layout_bindings.data();
+	VkDescriptorSetLayoutCreateInfo descriptor_layout_create_info{};
+	descriptor_layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	descriptor_layout_create_info.bindingCount = static_cast<uint32_t>(set_layout_bindings.size());
+	descriptor_layout_create_info.pBindings = set_layout_bindings.data();
 
-	if (vkCreateDescriptorSetLayout(this->device, &descriptorLayoutCI, nullptr, &this->descriptor_set_layout) != VK_SUCCESS) {
+	if (vkCreateDescriptorSetLayout(this->device, &descriptor_layout_create_info, nullptr, &this->descriptor_set_layout) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create descriptor set layout");
 	}
 }
@@ -59,26 +60,26 @@ void App::createDescriptorSets() {
 		allocateInfo.descriptorPool = this->descriptor_pool;
 		allocateInfo.descriptorSetCount = 1;
 		allocateInfo.pSetLayouts = &this->descriptor_set_layout;
-		if (vkAllocateDescriptorSets(this->device, &allocateInfo, &sphere.descriptor_set) != VK_SUCCESS) {
-
+		if (vkAllocateDescriptorSets(this->device, &allocateInfo, sphere->getDescriptorSet()) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate descriptor sets");
 		}
 
 		std::array<VkWriteDescriptorSet, 2> write_descriptor_sets{};
 
 		// Binding 0: RenderingObject uniform buffer
 		write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_descriptor_sets[0].dstSet = sphere.descriptor_set;
+		write_descriptor_sets[0].dstSet = *sphere->getDescriptorSet();
 		write_descriptor_sets[0].dstBinding = 0;
 		write_descriptor_sets[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		write_descriptor_sets[0].pBufferInfo = &sphere.uniform_buffer.descriptor_buffer_info;
+		write_descriptor_sets[0].pBufferInfo = sphere->getUniformBuffer()->getDescriptorBufferInfo();
 		write_descriptor_sets[0].descriptorCount = 1;
 
 		// Binding 1: RenderingObject texture
 		write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_descriptor_sets[1].dstSet = sphere.descriptor_set;
+		write_descriptor_sets[1].dstSet = *sphere->getDescriptorSet();
 		write_descriptor_sets[1].dstBinding = 1;
 		write_descriptor_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		write_descriptor_sets[1].pImageInfo = &sphere.texture.descriptor_image_info;
+		write_descriptor_sets[1].pImageInfo = sphere->getTexture()->getDescriptorImageInfo();
 		write_descriptor_sets[1].descriptorCount = 1;
 
 		vkUpdateDescriptorSets(this->device, static_cast<uint32_t>(write_descriptor_sets.size()), write_descriptor_sets.data(), 0, nullptr);
@@ -86,6 +87,70 @@ void App::createDescriptorSets() {
 }
 
 void updateUniformBuffers() {
+
+}
+
+void App::prepareCommand() {
+	this->command_buffers.resize(this->swapchain_framebuffers.size());
+
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.commandPool = this->command_pool;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandBufferCount = (uint32_t)this->command_buffers.size();
+
+	if (vkAllocateCommandBuffers(this->device, &allocInfo, this->command_buffers.data()) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate command buffers!");
+	}
+
+	for (size_t i = 0; i < this->command_buffers.size(); i++) {
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+		// コマンド記録開始
+		if (vkBeginCommandBuffer(this->command_buffers[i], &beginInfo) != VK_SUCCESS) {
+			throw std::runtime_error("failed to begin recording command buffer!");
+		}
+
+		{
+			VkRenderPassBeginInfo renderPassInfo{};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass = this->render_pass;
+			renderPassInfo.framebuffer = this->swapchain_framebuffers[i];
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent = this->swapchain_extent;
+
+			std::array<VkClearValue, 2> clearValues{};
+			clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			clearValues[1].depthStencil = { 1.0f, 0 };
+
+			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+			renderPassInfo.pClearValues = clearValues.data();
+
+			vkCmdBeginRenderPass(this->command_buffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+			vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
+
+			//VkBuffer vertexBuffers[] = { this->vertex_buffer };
+			//VkDeviceSize offsets[] = { 0 };
+			//vkCmdBindVertexBuffers(this->commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+			//vkCmdBindIndexBuffer(this->commandBuffers[i], this->indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+			for (auto sphere : this->spheres) {
+
+				vkCmdBindDescriptorSets(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline_layout, 0, 1, &this->descriptorSets[i], 0, nullptr);
+
+				vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
+			}
+
+			vkCmdEndRenderPass(this->command_buffers[i]);
+		}
+		// コマンド記録終了
+		if (vkEndCommandBuffer(this->commandBuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to record command buffer!");
+		}
+	}
 
 }
 
