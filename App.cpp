@@ -8,41 +8,101 @@
 #include <set>
 #include <array>
 #include <algorithm>
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#include "utils/UniformBufferObject.h"
+
 using std::cout;
 using std::endl;
 
+
+
+// vulkanの基本的な初期化
 void App::initVulkan() {
-	cout << "init vulkan" << endl;
-	cout << "init window" << endl;
 	this->initWindow();
-	cout << "create instance" << endl;
+
 	this->createInstance();
 #ifdef _DEBUG
-	// this->setupDebug();
+	this->setupDebug();
 #endif
-	cout << "create surface" << endl;
 	this->createSurface();
-	cout << "select physical device" << endl;
 	this->selectPhysicalDevice();
-	cout << "create device" << endl;
 	this->createLogicalDevice();
-
-	cout << "create swapchain" << endl;
 	this->createSwapchain();
-
-	cout << "create render pass" << endl;
 	this->createRenderPass();
-	cout << "create syncObject" << endl;
+
 	this->createSyncObjects();
 }
+
+
+// 実行
 void App::run() {
+	this->initVulkan();
 	this->prepare();
+	cout << "prepare end" << endl;
 	while (!glfwWindowShouldClose(this->window)) {
 		glfwPollEvents();
 		this->render();
 	}
 	vkDeviceWaitIdle(this->device);
 	this->cleanup();
+}
+
+// アプリケーションの事前準備
+void App::prepare() {
+	this->loadModel();
+	cout << "load model" << endl;
+	this->spheres.resize(this->sphere_count);
+	for (auto sphere : this->spheres) {
+		sphere = new Object();
+	}
+	cout << "init spheres" << endl;
+	this->createDescriptorSetLayout();
+	cout << "descriptorsetlayout" << endl;
+
+	// パイプライン作成、今回は単一
+	this->createGraphcisPipeline();
+
+	cout << "create pipeline" << endl;
+	// コマンドプール作成
+	this->createCommandPool();
+	cout << "create command pool" << endl;
+
+	this->createColorResources();
+	cout << "color" << endl;
+	this->createDepthResources();
+	cout << "depth" << endl;
+
+	this->createSwapchainFrameBuffers();
+	cout << "framebuffer" << endl;
+
+	// 各種リソース作成
+	this->prepareTexture();
+	cout << "texture" << endl;
+	this->createVertexBuffer();
+	cout << "vertex" << endl;
+	this->createIndexBuffer();
+	cout << "index" << endl;
+	this->createUniformBuffers();
+	cout << "uniform" << endl;
+
+
+	// デスクリプタ準備
+	this->createDescriptorPool();
+	cout << "descriptor pool" << endl;
+	this->createDescriptorSets();
+	cout << " descriptorset" << endl;
+
+	// コマンドバッファ作成
+	this->createCommandBuffers();
+	cout << "commandbuffer" << endl;
+	// コマンド記録
+	this->prepareCommand();
+	cout << "preparecommand" << endl;
 }
 void App::render() {
 	vkWaitForFences(this->device, 1, &this->in_flight_fences[this->current_frame], VK_TRUE, UINT64_MAX);
@@ -99,35 +159,21 @@ void App::render() {
 
 	this->current_frame = (this->current_frame + 1) % semaphore_size;
 }
-void App::prepare() {
-	// インスタンス、デバイス、スワップチェイン、サーフェス、ウィンドウ
-	this->initVulkan();
-
-	this->loadModel();
-	this->spheres.resize(this->sphere_count);
-	for (auto sphere : this->spheres) {
-		sphere = new Object(this->unique_model);
-	}
-
-	this->createDescriptorPool();
-	this->createDescriptorSetLayout();
-	this->createDescriptorSets();
-	// コマンドプール作成
-	this->createCommandPool();
-	// コマンドバッファ作成
-	this->createCommandBuffers();
-	// コマンド記録
-	this->prepareCommand();
-}
 void App::cleanup() {
-
-	glfwDestroyWindow(this->window);
-	glfwTerminate();
 	this->deleteSwapchain();
-	// this->deleteLogicalDevice();
+	this->deleteTexture();
+	this->deleteDescriptor();
+	this->deleteIndexBuffer();
+	this->deleteVertexBuffer();
+	this->deleteSyncObjects();
+	this->deleteCommandPool();
+	this->deleteLogicalDevice();
+#ifdef _DEBUG
+	this->deleteDebugMessenger();
+#endif
 	this->deleteSurface();
-	// debug
 	this->deleteInstance();
+	this->deleteWindow();
 }
 
 
@@ -260,13 +306,13 @@ void App::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
 
 }
 void App::deleteWindow() {
-
+	glfwDestroyWindow(this->window);
+	glfwTerminate();
 }
 
 
-
-
 // ------------------------------ instance ----------------------------------------
+#ifdef _DEBUG
 bool App::checkValidationLayerSupport() {
 	uint32_t layerCount;
 	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -287,6 +333,8 @@ bool App::checkValidationLayerSupport() {
 	}
 	return true;
 }
+#endif
+
 void App::createInstance() {
 #ifdef _DEBUG
 	if (checkValidationLayerSupport() == false) {
@@ -343,6 +391,7 @@ void App::deleteInstance() {
 
 
 // ------------------------------ debug ----------------------------------------
+#ifdef _DEBUG
 VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
 	std::cerr << "validation layer:\t" << pCallbackData->pMessage << std::endl;
 	return VK_FALSE;
@@ -377,8 +426,10 @@ void App::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& c
 	createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 	createInfo.pfnUserCallback = debugCallback;
 }
-
-
+void App::deleteDebugMessenger() {
+	DestroyDebugUtilsMessengerEXT(this->instance, this->debug_messenger, nullptr);
+}
+#endif
 
 // ------------------------------ surface ----------------------------------------
 void App::createSurface() {
@@ -387,7 +438,7 @@ void App::createSurface() {
 	}
 }
 void App::deleteSurface() {
-
+	vkDestroySurfaceKHR(this->instance, this->surface, nullptr);
 }
 
 // ------------------------------ device ----------------------------------------
@@ -550,7 +601,9 @@ void App::createLogicalDevice() {
 	vkGetDeviceQueue(this->device, this->graphics_queue_index.value(), 0, &this->graphics_queue);
 	vkGetDeviceQueue(this->device, this->present_queue_index.value(), 0, &this->present_queue);
 }
-
+void App::deleteLogicalDevice() {
+	vkDestroyDevice(this->device, nullptr);
+}
 
 
 // ------------------------------ swapchain ----------------------------------------
@@ -644,7 +697,31 @@ void App::createSwapchain() {
 	this->createSwapchainImageViews();
 }
 void App::deleteSwapchain() {
+	vkDestroyImageView(this->device, this->depth_image_view, nullptr);
+	vkDestroyImage(this->device, this->depth_image, nullptr);
+	vkFreeMemory(this->device, this->depth_image_memory, nullptr);
+
+	for (auto framebuffer : swapchain_framebuffers) {
+		vkDestroyFramebuffer(this->device, framebuffer, nullptr);
+	}
+
+	vkFreeCommandBuffers(this->device, command_pool, static_cast<uint32_t>(this->command_buffers.size()), this->command_buffers.data());
+
+	vkDestroyPipeline(this->device, this->graphics_pipeline, nullptr);
+	vkDestroyPipelineLayout(this->device, this->pipeline_layout, nullptr);
+	vkDestroyRenderPass(this->device, this->render_pass, nullptr);
+
+	for (auto imageView : this->swapchain_image_views) {
+		vkDestroyImageView(device, imageView, nullptr);
+	}
+
 	vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
+
+	for (auto sphere : this->spheres) {
+		sphere->deleteUniformBuffer(this->device);
+	}
+
+	vkDestroyDescriptorPool(this->device, this->descriptor_pool, nullptr);
 }
 void App::createSwapchainImageViews() {
 	this->swapchain_image_views.resize(this->swapchain_images.size());
@@ -659,7 +736,28 @@ void App::deleteSwapchainImageViews() {
 	}
 }
 void App::createSwapchainFrameBuffers() {
+	this->swapchain_framebuffers.resize(this->swapchain_image_views.size());
 
+	for (size_t i = 0; i < this->swapchain_image_views.size(); i++) {
+		std::array<VkImageView, 3> attachments = {
+			this->color_image_view,
+			this->depth_image_view,
+			this->swapchain_image_views[i]
+		};
+
+		VkFramebufferCreateInfo framebufferInfo{};
+		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass = this->render_pass;
+		framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		framebufferInfo.pAttachments = attachments.data();
+		framebufferInfo.width = this->swapchain_extent.width;
+		framebufferInfo.height = this->swapchain_extent.height;
+		framebufferInfo.layers = 1;
+
+		if (vkCreateFramebuffer(this->device, &framebufferInfo, nullptr, &this->swapchain_framebuffers[i]) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create framebuffer!");
+		}
+	}
 }
 void App::deleteSwapchainFrameBuffers() {
 	for (auto framebuffer : this->swapchain_framebuffers) {
@@ -709,12 +807,19 @@ void App::createSyncObjects() {
 		}
 	}
 }
-
+void App::deleteSyncObjects() {
+	for (size_t i = 0; i < semaphore_size; i++) {
+		vkDestroySemaphore(device, render_finished_semaphores[i], nullptr);
+		vkDestroySemaphore(device, image_available_semaphores[i], nullptr);
+		vkDestroyFence(device, in_flight_fences[i], nullptr);
+	}
+}
 
 
 
 
 // ------------------------------ render pass ----------------------------------------
+
 void App::createRenderPass() {
 	VkAttachmentDescription color_attachment{};
 	color_attachment.format = this->swapchain_image_format;
@@ -794,6 +899,7 @@ void App::deleteRenderPass() {
 
 
 // ------------------------------ graphics pipeline ------------------------------------
+
 void App::createGraphcisPipeline() {
 	auto vert_shader_code = readFile("shaders/vert.spv");
 	auto frag_shader_code = readFile("shaders/frag.spv");
@@ -970,10 +1076,347 @@ VkShaderModule App::createShaderModule(const std::vector<char>& code) {
 }
 
 
+// ------------------------------ buffers --------------------------------------------
+void App::loadModel() {
+	std::string model_file_path = "models/sphere.obj";
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, model_file_path.c_str())) {
+		throw std::runtime_error(warn + err);
+	}
+
+	std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+	for (const auto& shape : shapes) {
+		for (const auto& index : shape.mesh.indices) {
+			Vertex vertex{};
+
+			vertex.pos = {
+				attrib.vertices[3 * index.vertex_index + 0],
+				attrib.vertices[3 * index.vertex_index + 1],
+				attrib.vertices[3 * index.vertex_index + 2]
+			};
+
+			vertex.tex_coord = {
+				attrib.texcoords[2 * index.texcoord_index + 0],
+				1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+			};
+
+			vertex.color = { 1.0f, 1.0f, 1.0f };
+
+			if (uniqueVertices.count(vertex) == 0) {
+				uniqueVertices[vertex] = static_cast<uint32_t>(this->vertices.size());
+				this->vertices.push_back(vertex);
+			}
+
+			this->indices.push_back(uniqueVertices[vertex]);
+		}
+	}
+}
+void App::createVertexBuffer() {
+	VkDeviceSize bufferSize = sizeof(this->vertices[0]) * this->vertices.size();
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	vkMapMemory(this->device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, this->vertices.data(), (size_t)bufferSize);
+	vkUnmapMemory(this->device, stagingBufferMemory);
+
+	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->vertex_buffer, this->vertex_buffer_memory);
+
+	copyBuffer(stagingBuffer, this->vertex_buffer, bufferSize);
+
+	vkDestroyBuffer(this->device, stagingBuffer, nullptr);
+	vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+
+}
+void App::deleteVertexBuffer() {
+	vkDestroyBuffer(this->device, this->vertex_buffer, nullptr);
+	vkFreeMemory(this->device, this->vertex_buffer_memory, nullptr);
+}
+void App::createIndexBuffer() {
+	VkDeviceSize bufferSize = sizeof(this->indices[0]) * this->indices.size();
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	vkMapMemory(this->device, stagingBufferMemory, 0, bufferSize, 0, &data);
+	memcpy(data, this->indices.data(), (size_t)bufferSize);
+	vkUnmapMemory(this->device, stagingBufferMemory);
+
+	createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->index_buffer, this->index_buffer_memory);
+
+	copyBuffer(stagingBuffer, this->index_buffer, bufferSize);
+
+	vkDestroyBuffer(this->device, stagingBuffer, nullptr);
+	vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+
+}
+void App::deleteIndexBuffer() {
+	vkDestroyBuffer(this->device, this->index_buffer, nullptr);
+	vkFreeMemory(this->device, this->index_buffer_memory, nullptr);
+}
+void App::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+	VkCommandBuffer command_buffer = this->beginSingleTimeCommands();
+	VkBufferCopy copy_region{};
+	copy_region.size = size;
+	vkCmdCopyBuffer(command_buffer, srcBuffer, dstBuffer, 1, &copy_region);
+	this->endSingleTimeCommands(command_buffer);
+}
+
+void App::createUniformBuffers() {
+	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+	for (auto sphere : this->spheres) {
+		createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sphere->uniform_buffer, sphere->device_memory);
+	}
+
+}
+void App::updateUniformBuffers() {
+	for (auto sphere : this->spheres) {
+		sphere->updateUniformBuffer();
+	}
+}
+
+
+// ------------------------------ textures --------------------------------------------
+
+void App::prepareTexture() {
+	this->createTextureImage(this->texture_file_path);
+	this->createTextureImageView();
+	this->createTextureSampler();
+}
+void App::deleteTexture() {
+	vkDestroySampler(this->device, this->texture_sampler, nullptr);
+	vkDestroyImageView(this->device, this->texture_image_view, nullptr);
+	vkDestroyImage(this->device, this->texture_image, nullptr);
+	vkFreeMemory(this->device, this->texture_image_memory, nullptr);
+}
+
+void App::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels) {
+	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.oldLayout = oldLayout;
+	barrier.newLayout = newLayout;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.image = image;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = mipLevels;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	VkPipelineStageFlags sourceStage;
+	VkPipelineStageFlags destinationStage;
+
+	if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	}
+	else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	else {
+		throw std::invalid_argument("unsupported layout transition!");
+	}
+
+	vkCmdPipelineBarrier(
+		commandBuffer,
+		sourceStage, destinationStage,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+
+	endSingleTimeCommands(commandBuffer);
+}
+void App::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
+	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+
+	VkBufferImageCopy region{};
+	region.bufferOffset = 0;
+	region.bufferRowLength = 0;
+	region.bufferImageHeight = 0;
+	region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	region.imageSubresource.mipLevel = 0;
+	region.imageSubresource.baseArrayLayer = 0;
+	region.imageSubresource.layerCount = 1;
+	region.imageOffset = { 0, 0, 0 };
+	region.imageExtent = {
+		width,
+		height,
+		1
+	};
+
+	vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	endSingleTimeCommands(commandBuffer);
+}
+void App::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels) {
+	VkFormatProperties formatProperties;
+	vkGetPhysicalDeviceFormatProperties(this->physical_device, imageFormat, &formatProperties);
+
+	if (!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+		throw std::runtime_error("texture image format does not support linear blitting!");
+	}
+
+	VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+
+	VkImageMemoryBarrier barrier{};
+	barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	barrier.image = image;
+	barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+	barrier.subresourceRange.levelCount = 1;
+
+	int32_t mipWidth = texWidth;
+	int32_t mipHeight = texHeight;
+
+	for (uint32_t i = 1; i < mipLevels; i++) {
+		barrier.subresourceRange.baseMipLevel = i - 1;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+		vkCmdPipelineBarrier(commandBuffer,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier);
+
+		VkImageBlit blit{};
+		blit.srcOffsets[0] = { 0, 0, 0 };
+		blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+		blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		blit.srcSubresource.mipLevel = i - 1;
+		blit.srcSubresource.baseArrayLayer = 0;
+		blit.srcSubresource.layerCount = 1;
+		blit.dstOffsets[0] = { 0, 0, 0 };
+		blit.dstOffsets[1] = { mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1 };
+		blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		blit.dstSubresource.mipLevel = i;
+		blit.dstSubresource.baseArrayLayer = 0;
+		blit.dstSubresource.layerCount = 1;
+
+		vkCmdBlitImage(commandBuffer,
+			image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1, &blit,
+			VK_FILTER_LINEAR);
+
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		vkCmdPipelineBarrier(commandBuffer,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier);
+
+		if (mipWidth > 1) mipWidth /= 2;
+		if (mipHeight > 1) mipHeight /= 2;
+	}
+
+	barrier.subresourceRange.baseMipLevel = mipLevels - 1;
+	barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+	vkCmdPipelineBarrier(commandBuffer,
+		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+		0, nullptr,
+		0, nullptr,
+		1, &barrier);
+
+	endSingleTimeCommands(commandBuffer);
+}
+void App::createTextureImage(std::string texture_file_path) {
+	int texWidth, texHeight, texChannels;
+	stbi_uc* pixels = stbi_load(texture_file_path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+	VkDeviceSize imageSize = texWidth * texHeight * 4;
+	this->mip_levels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
+
+	if (!pixels) {
+		throw std::runtime_error("failed to load texture image!");
+	}
+
+	VkBuffer stagingBuffer;
+	VkDeviceMemory stagingBufferMemory;
+	createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+	void* data;
+	vkMapMemory(this->device, stagingBufferMemory, 0, imageSize, 0, &data);
+	memcpy(data, pixels, static_cast<size_t>(imageSize));
+	vkUnmapMemory(this->device, stagingBufferMemory);
+
+	stbi_image_free(pixels);
+
+	createImage(texWidth, texHeight, this->mip_levels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->texture_image, this->texture_image_memory);
+
+	transitionImageLayout(this->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, this->mip_levels);
+	copyBufferToImage(stagingBuffer, this->texture_image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+
+	vkDestroyBuffer(this->device, stagingBuffer, nullptr);
+	vkFreeMemory(this->device, stagingBufferMemory, nullptr);
+
+	generateMipmaps(this->texture_image, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, this->mip_levels);
+}
+void App::createTextureImageView() {
+	this->texture_image_view = this->createImageView(this->texture_image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_ASPECT_COLOR_BIT, this->mip_levels);
+}
+void App::createTextureSampler() {
+	VkSamplerCreateInfo samplerInfo{};
+	samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	samplerInfo.magFilter = VK_FILTER_LINEAR;
+	samplerInfo.minFilter = VK_FILTER_LINEAR;
+	samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+	samplerInfo.anisotropyEnable = VK_TRUE;
+	samplerInfo.maxAnisotropy = 16.0f;
+	samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+	samplerInfo.unnormalizedCoordinates = VK_FALSE;
+	samplerInfo.compareEnable = VK_FALSE;
+	samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+	samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	samplerInfo.minLod = 0.0f;
+	samplerInfo.maxLod = static_cast<float>(this->mip_levels);
+	samplerInfo.mipLodBias = 0.0f;
+
+	if (vkCreateSampler(this->device, &samplerInfo, nullptr, &this->texture_sampler) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create texture sampler!");
+	}
+}
 
 
 
 // ------------------------------ command ----------------------------------------
+
 void App::createCommandPool() {
 	VkCommandPoolCreateInfo pool_info{};
 	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -983,7 +1426,7 @@ void App::createCommandPool() {
 	}
 }
 void App::deleteCommandPool() {
-
+	vkDestroyCommandPool(this->device, this->command_pool, nullptr);
 }
 void App::createCommandBuffers() {
 	this->command_buffers.resize(this->swapchain_framebuffers.size());
@@ -1026,15 +1469,20 @@ void App::prepareCommand() {
 
 		vkCmdBeginRenderPass(this->command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
+		// 共通のパイプライン
 		vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
 
-		// 共通のモデルを使用する
-		this->unique_model->bindBuffers(this->command_buffers[i]);
+		// 共通の頂点を使用する
+		VkBuffer vertexBuffers[] = { this->vertex_buffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(this->command_buffers[i], 0, 1, vertexBuffers, offsets);
+		vkCmdBindIndexBuffer(this->command_buffers[i], this->index_buffer, 0, VK_INDEX_TYPE_UINT32);
+
 
 		// デスクリプタセットのみ各オブジェクト別に割り当てる
 		for (auto sphere : this->spheres) {
 			sphere->bindDescriptorSets(this->command_buffers[i], this->pipeline_layout);
-			sphere->draw(this->command_buffers[i]);
+			vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
 		}
 
 		vkCmdEndRenderPass(this->command_buffers[i]);
@@ -1044,12 +1492,52 @@ void App::prepareCommand() {
 			throw std::runtime_error("failed to record command buffer!");
 		}
 	}
+}
 
+VkCommandBuffer App::beginSingleTimeCommands() {
+	VkCommandBufferAllocateInfo allocInfo{};
+	allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocInfo.commandPool = this->command_pool;
+	allocInfo.commandBufferCount = 1;
+
+	VkCommandBuffer commandBuffer;
+	vkAllocateCommandBuffers(this->device, &allocInfo, &commandBuffer);
+
+	VkCommandBufferBeginInfo beginInfo{};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+	return commandBuffer;
+}
+void App::endSingleTimeCommands(VkCommandBuffer command_buffer) {
+	vkEndCommandBuffer(command_buffer);
+
+	VkSubmitInfo submitInfo{};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &command_buffer;
+
+	vkQueueSubmit(this->graphics_queue, 1, &submitInfo, VK_NULL_HANDLE);
+	vkQueueWaitIdle(this->graphics_queue);
+
+	vkFreeCommandBuffers(this->device, this->command_pool, 1, &command_buffer);
 }
 
 
 
 // ------------------------------ descriptor ----------------------------------------
+void App::prepareDescriptor() {
+	this->createDescriptorPool();
+	this->createDescriptorSetLayout();
+	this->createDescriptorSets();
+}
+
+void App::deleteDescriptor() {
+	vkDestroyDescriptorSetLayout(this->device, this->descriptor_set_layout, nullptr);
+}
 void App::createDescriptorPool() {
 	// 描画する球体の数だけユニフォームバッファとテクスチャサンプラーが作成される可能性がある
 	std::array<VkDescriptorPoolSize, 2> pool_sizes{};
@@ -1101,23 +1589,20 @@ void App::createDescriptorSets() {
 		allocate_info.pSetLayouts = &this->descriptor_set_layout;
 		sphere->allocateDescriptorSets(this->device, allocate_info);
 
-		sphere->writeDescriptorSets(this->device);
+		// テクスチャも共通のものを使う、何ならここではテクスチャいらない
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = sphere->uniform_buffer;
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferObject);
+		VkDescriptorImageInfo image_info{};
+		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		image_info.imageView = this->texture_image_view;
+		image_info.sampler = this->texture_sampler;
+
+		sphere->writeDescriptorSets(this->device, &bufferInfo, &image_info);
 	}
 }
 
 
-
-
-
-void App::loadModel() {
-	std::string model_file_path = "models/sphere.obj";
-	this->unique_model = new Model();
-	this->unique_model->load(model_file_path);
-}
-void App::updateUniformBuffers() {
-	for (auto sphere : this->spheres) {
-		sphere->updateUniformBuffer();
-	}
-}
 
 

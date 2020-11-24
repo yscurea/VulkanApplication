@@ -45,9 +45,6 @@
     <ClCompile Include="utils\Initializer.cpp">
       <Filter>ソース ファイル\utils</Filter>
     </ClCompile>
-    <ClCompile Include="utils\Model.cpp">
-      <Filter>ソース ファイル\utils</Filter>
-    </ClCompile>
     <ClCompile Include="utils\Vertex.cpp">
       <Filter>ソース ファイル\utils</Filter>
     </ClCompile>
@@ -55,6 +52,12 @@
       <Filter>ソース ファイル\utils</Filter>
     </ClCompile>
     <ClCompile Include="utils\SwapchainSupportDetails.cpp">
+      <Filter>ソース ファイル\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\utils.cpp">
+      <Filter>ソース ファイル\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\UniformBufferObject.cpp">
       <Filter>ソース ファイル\utils</Filter>
     </ClCompile>
   </ItemGroup>
@@ -90,9 +93,6 @@
     <ClInclude Include="utils\Initializer.h">
       <Filter>ヘッダー ファイル\utils</Filter>
     </ClInclude>
-    <ClInclude Include="utils\Model.h">
-      <Filter>ヘッダー ファイル\utils</Filter>
-    </ClInclude>
     <ClInclude Include="utils\Vertex.h">
       <Filter>ヘッダー ファイル\utils</Filter>
     </ClInclude>
@@ -100,6 +100,12 @@
       <Filter>ヘッダー ファイル\utils</Filter>
     </ClInclude>
     <ClInclude Include="utils\SwapchainSupportDetails.h">
+      <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\utils.h">
+      <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\UniformBufferObject.h">
       <Filter>ヘッダー ファイル\utils</Filter>
     </ClInclude>
   </ItemGroup>

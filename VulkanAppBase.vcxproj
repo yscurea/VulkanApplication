@@ -165,9 +165,10 @@
     <ClCompile Include="utils\Buffer.cpp" />
     <ClCompile Include="utils\DeviceQueueIndices.cpp" />
     <ClCompile Include="utils\Initializer.cpp" />
-    <ClCompile Include="utils\Model.cpp" />
     <ClCompile Include="utils\SwapchainSupportDetails.cpp" />
     <ClCompile Include="utils\Texture.cpp" />
+    <ClCompile Include="utils\UniformBufferObject.cpp" />
+    <ClCompile Include="utils\utils.cpp" />
     <ClCompile Include="utils\Vertex.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -184,9 +185,10 @@
     <ClInclude Include="utils\Buffer.h" />
     <ClInclude Include="utils\DeviceQueueIndices.h" />
     <ClInclude Include="utils\Initializer.h" />
-    <ClInclude Include="utils\Model.h" />
     <ClInclude Include="utils\SwapchainSupportDetails.h" />
     <ClInclude Include="utils\Texture.h" />
+    <ClInclude Include="utils\UniformBufferObject.h" />
+    <ClInclude Include="utils\utils.h" />
     <ClInclude Include="utils\Vertex.h" />
   </ItemGroup>
   <ItemGroup>

@@ -3,26 +3,22 @@
 #include <vulkan/vulkan.h>
 #include <string>
 
-#include "utils/Model.h"
 #include "utils/Buffer.h"
 #include "utils/Texture.h"
-
-// ここでは全てのオブジェクトは描画されるという前提とする
+#include "utils/UniformBufferObject.h"
 
 class Object {
 public:
-	Object(Model* model);
-	void draw(VkCommandBuffer command_buffer);
 	void allocateDescriptorSets(VkDevice& device, VkDescriptorSetAllocateInfo allocate_info);
 	void bindDescriptorSets(VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout);
-	void writeDescriptorSets(VkDevice& device);
-	void setModel(Model* model); // 共通のモデルを使用するときに使う
-	void loadModel(std::string model_path); // 新規読み込みに使う
+	void writeDescriptorSets(VkDevice& device, VkDescriptorBufferInfo* buffer_info, VkDescriptorImageInfo* image_info);
 	void updateUniformBuffer();
-private:
-	Model* model;
+
+	void deleteUniformBuffer(VkDevice device);
+	// private:
+	// todo: プライベートにするために設計のし直し
 	VkDescriptorSet descriptor_set;
-	Buffer uniform_buffer;
-	Texture texture;
+	VkBuffer uniform_buffer;
+	VkDeviceMemory device_memory;
 };
 

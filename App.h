@@ -12,20 +12,23 @@
 #include <optional>
 
 #include "Object.h"
-#include "utils/Model.h"
+#include "utils/Vertex.h"
 #include "utils/DeviceQueueIndices.h"
 #include "utils/SwapchainSupportDetails.h"
 
+// todo: 各々が密接すぎてクラス分けが難しいけどクラスわけする
+	// 理想は ----- で区切っているものを全てクラスとして分離する
+// todo: vulkanの初期化で共通する部分を親クラスとする
+
 /// <summary>
-/// 球体の複数描画する
+/// 球体の大量に描画する
 /// </summary>
 class App {
 public:
 	void run();
 private:
-	Model* unique_model;
 	void loadModel();
-	uint32_t sphere_count = 100;
+	uint32_t sphere_count = 10;
 	std::vector<Object*> spheres;
 
 	void prepareCommand();
@@ -36,8 +39,11 @@ private:
 
 	void initVulkan();
 	void cleanup();
-protected:
+
+
+
 	// ------------------------------ window ----------------------------------------
+
 	GLFWwindow* window;
 	int window_width = 800;
 	int window_height = 600;
@@ -47,24 +53,30 @@ protected:
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height);
 
 	// ------------------------------ instance ----------------------------------------
+
 	VkInstance instance;
 	void createInstance();
 	bool checkValidationLayerSupport();
 	void deleteInstance();
 
-#ifdef _DEBUG
+
+
 	// ------------------------------ debug ----------------------------------------
+#ifdef _DEBUG
 	std::vector<const char*> validation_layers = { "VK_LAYER_KHRONOS_validation" };
 	VkDebugUtilsMessengerEXT debug_messenger;
 	void setupDebug();
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+	void deleteDebugMessenger();
 #endif
 
 
 	// ------------------------------ surface ----------------------------------------
+
 	VkSurfaceKHR surface;
 	void createSurface();
 	void deleteSurface();
+
 
 	// ------------------------------ device ----------------------------------------
 	VkPhysicalDevice physical_device;
@@ -77,6 +89,7 @@ protected:
 	bool isDeviceSuitable(VkPhysicalDevice physical_device);
 	VkDevice device;
 	void createLogicalDevice();
+	void deleteLogicalDevice();
 	VkQueue graphics_queue;
 	std::optional<uint32_t> graphics_queue_index;
 	VkQueue present_queue;
@@ -90,7 +103,7 @@ protected:
 	void deleteSwapchain();
 	std::vector<VkImage> swapchain_images;
 	void createSwapchainImages();
-	void deleteSwapchainImages();
+	// void deleteSwapchainImages();
 	std::vector<VkImageView> swapchain_image_views;
 	void createSwapchainImageViews();
 	void deleteSwapchainImageViews();
@@ -121,15 +134,16 @@ protected:
 	std::vector<VkFence> in_flight_fences;
 	std::vector<VkFence> images_in_flight;
 	void createSyncObjects();
-	// void deleteSyncObjects();
-
+	void deleteSyncObjects();
 
 	// ------------------------------ render pass ----------------------------------------
+
 	VkRenderPass render_pass;
 	virtual void createRenderPass();
 	void deleteRenderPass();
 
 	// ------------------------------ command ----------------------------------------
+
 	VkCommandPool command_pool;
 	void createCommandPool();
 	void deleteCommandPool();
@@ -137,28 +151,75 @@ protected:
 	void createCommandBuffers();
 	void deleteCommandBuffers();
 
-
+	VkCommandBuffer beginSingleTimeCommands();
+	void endSingleTimeCommands(VkCommandBuffer command_buffer);
 
 	// ------------------------------ pipeline ----------------------------------------
+
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
 	void createGraphcisPipeline();
 
 
+
 	// ------------------------------ descriptor ----------------------------------------
+
+	void prepareDescriptor();
+	void deleteDescriptor();
 	VkDescriptorPool descriptor_pool;
 	void createDescriptorPool();
 	VkDescriptorSetLayout descriptor_set_layout;
 	void createDescriptorSetLayout();
 	void createDescriptorSets();
 
+	// ------------------------------ buffers ----------------------------------------
+
+	// 今回は頂点もテクスチャも共通のものを使用するため単一
+
+	// 頂点バッファ
+	std::vector<Vertex> vertices;
+	std::vector<uint32_t> indices;
+	VkBuffer vertex_buffer;
+	VkDeviceMemory vertex_buffer_memory;
+	VkBuffer index_buffer;
+	VkDeviceMemory index_buffer_memory;
+	void createVertexBuffer();
+	void deleteVertexBuffer();
+	void createIndexBuffer();
+	void deleteIndexBuffer();
+	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+	// テクスチャ
+	std::string texture_file_path = "textures/sample.png";
+	uint32_t mip_levels;
+	VkImage texture_image;
+	VkDeviceMemory texture_image_memory;
+	VkImageView texture_image_view;
+	VkSampler texture_sampler;
+
+	void prepareTexture();
+	void deleteTexture();
+
+	void createTextureImage(std::string texture_file_path);
+	void createTextureImageView();
+	void createTextureSampler();
+
+	void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
+	void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+	void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
+
+	// ユニフォームバッファ（定数バッファ）
+	void createUniformBuffers();
+
 
 	// ------------------------------ shader ----------------------------------------
+
 	std::vector<char> readFile(const std::string& filename);
 	VkShaderModule createShaderModule(const std::vector<char>& code);
 
 
 	// ------------------------------ utils ----------------------------------------
+
 	uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 	void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
