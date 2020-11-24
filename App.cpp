@@ -81,16 +81,12 @@ void App::prepare() {
 
 	// デスクリプタ準備
 	this->createDescriptorPool();
-	cout << "descriptor pool" << endl;
 	this->createDescriptorSets();
-	cout << " descriptorset" << endl;
 
 	// コマンドバッファ作成
 	this->createCommandBuffers();
-	cout << "commandbuffer" << endl;
 	// コマンド記録
 	this->prepareCommand();
-	cout << "preparecommand" << endl;
 }
 void App::render() {
 	vkWaitForFences(this->device, 1, &this->in_flight_fences[this->current_frame], VK_TRUE, UINT64_MAX);
@@ -600,7 +596,7 @@ static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFor
 		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 			return availableFormat;
 		}
-	}
+}
 
 	return available_formats[0];
 }
