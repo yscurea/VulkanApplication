@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "./Vertex.h"
+#include "./Texture.h"
 
 class Model {
 public:
@@ -18,4 +19,5 @@ private:
 	VkDeviceMemory vertex_buffer_memory;
 	VkBuffer index_buffer;
 	VkDeviceMemory index_buffer_memory;
+	// Texture texture;
 };

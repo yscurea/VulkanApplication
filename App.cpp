@@ -8,18 +8,32 @@
 #include <set>
 #include <array>
 #include <algorithm>
+using std::cout;
+using std::endl;
 
 void App::initVulkan() {
+	cout << "init vulkan" << endl;
+	cout << "init window" << endl;
 	this->initWindow();
+	cout << "create instance" << endl;
 	this->createInstance();
 #ifdef _DEBUG
 	// this->setupDebug();
 #endif
+	cout << "create surface" << endl;
 	this->createSurface();
+	cout << "select physical device" << endl;
 	this->selectPhysicalDevice();
+	cout << "create device" << endl;
 	this->createLogicalDevice();
+
+	cout << "create swapchain" << endl;
 	this->createSwapchain();
+
+	cout << "create render pass" << endl;
 	this->createRenderPass();
+	cout << "create syncObject" << endl;
+	this->createSyncObjects();
 }
 void App::run() {
 	this->prepare();
@@ -89,6 +103,12 @@ void App::prepare() {
 	// インスタンス、デバイス、スワップチェイン、サーフェス、ウィンドウ
 	this->initVulkan();
 
+	this->loadModel();
+	this->spheres.resize(this->sphere_count);
+	for (auto sphere : this->spheres) {
+		sphere = new Object(this->unique_model);
+	}
+
 	this->createDescriptorPool();
 	this->createDescriptorSetLayout();
 	this->createDescriptorSets();
@@ -98,8 +118,6 @@ void App::prepare() {
 	this->createCommandBuffers();
 	// コマンド記録
 	this->prepareCommand();
-
-	this->loadModel();
 }
 void App::cleanup() {
 
@@ -241,7 +259,6 @@ void App::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
 	app->framebuffer_resized = true;
 
 }
-
 void App::deleteWindow() {
 
 }
@@ -345,7 +362,14 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT
 		func(instance, debugMessenger, pAllocator);
 	}
 }
+void App::setupDebug() {
+	VkDebugUtilsMessengerCreateInfoEXT create_info;
+	populateDebugMessengerCreateInfo(create_info);
 
+	if (CreateDebugUtilsMessengerEXT(this->instance, &create_info, nullptr, &this->debug_messenger) != VK_SUCCESS) {
+		throw std::runtime_error("failed to set up debug messenger!");
+	}
+}
 void App::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) {
 	createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -617,21 +641,22 @@ void App::createSwapchain() {
 	this->swapchain_image_format = surface_format.format;
 	this->swapchain_extent = extent;
 
+	this->createSwapchainImageViews();
 }
 void App::deleteSwapchain() {
 	vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
 }
-void App::createSwapchainImages() {
-}
-void App::deleteSwapchainImages() {
-}
 void App::createSwapchainImageViews() {
-	for (auto image_view : this->swapchain_image_views) {
-		vkDestroyImageView(this->device, image_view, nullptr);
+	this->swapchain_image_views.resize(this->swapchain_images.size());
+
+	for (uint32_t i = 0; i < this->swapchain_images.size(); i++) {
+		this->swapchain_image_views[i] = createImageView(this->swapchain_images[i], this->swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 	}
 }
 void App::deleteSwapchainImageViews() {
-
+	for (auto image_view : this->swapchain_image_views) {
+		vkDestroyImageView(this->device, image_view, nullptr);
+	}
 }
 void App::createSwapchainFrameBuffers() {
 
@@ -642,7 +667,10 @@ void App::deleteSwapchainFrameBuffers() {
 	}
 }
 void App::createColorResources() {
+	VkFormat colorFormat = swapchain_image_format;
 
+	createImage(this->swapchain_extent.width, this->swapchain_extent.height, 1, this->sample_count_falg_bits, colorFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, this->color_image, this->color_image_memory);
+	this->color_image_view = createImageView(this->color_image, colorFormat, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
 void App::deleteColorResources() {
 	vkDestroyImageView(this->device, this->color_image_view, nullptr);
@@ -1001,7 +1029,7 @@ void App::prepareCommand() {
 		vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
 
 		// 共通のモデルを使用する
-		this->unique_model.bindBuffers(this->command_buffers[i]);
+		this->unique_model->bindBuffers(this->command_buffers[i]);
 
 		// デスクリプタセットのみ各オブジェクト別に割り当てる
 		for (auto sphere : this->spheres) {
@@ -1083,10 +1111,8 @@ void App::createDescriptorSets() {
 
 void App::loadModel() {
 	std::string model_file_path = "models/sphere.obj";
-	this->unique_model.load(model_file_path);
-	for (auto sphere : this->spheres) {
-		sphere->setModel(&this->unique_model);
-	}
+	this->unique_model = new Model();
+	this->unique_model->load(model_file_path);
 }
 void App::updateUniformBuffers() {
 	for (auto sphere : this->spheres) {

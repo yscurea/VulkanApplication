@@ -23,7 +23,7 @@ class App {
 public:
 	void run();
 private:
-	Model unique_model;
+	Model* unique_model;
 	void loadModel();
 	uint32_t sphere_count = 100;
 	std::vector<Object*> spheres;
@@ -58,7 +58,6 @@ protected:
 	VkDebugUtilsMessengerEXT debug_messenger;
 	void setupDebug();
 	void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-	void deleteDebug();
 #endif
 
 

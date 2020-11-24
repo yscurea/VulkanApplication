@@ -14,7 +14,7 @@ void Object::loadModel(std::string model_path) {
 void Object::bindDescriptorSets(VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout) {
 	vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &this->descriptor_set, 0, nullptr);
 }
-void Object::writeDescriptorSets(VkDevice device) {
+void Object::writeDescriptorSets(VkDevice& device) {
 	std::array<VkWriteDescriptorSet, 2> write_descriptor_sets{};
 	// Binding 0: ユニフォームバッファ
 	write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
