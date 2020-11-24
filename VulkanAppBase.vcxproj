@@ -164,8 +164,10 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="utils\Buffer.cpp" />
+    <ClCompile Include="utils\DeviceQueueIndices.cpp" />
     <ClCompile Include="utils\Initializer.cpp" />
     <ClCompile Include="utils\Model.cpp" />
+    <ClCompile Include="utils\SwapchainSupportDetails.cpp" />
     <ClCompile Include="utils\Texture.cpp" />
     <ClCompile Include="utils\Vertex.cpp" />
   </ItemGroup>
@@ -182,13 +184,12 @@
     <ClInclude Include="AppBase.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="utils\Buffer.h" />
+    <ClInclude Include="utils\DeviceQueueIndices.h" />
     <ClInclude Include="utils\Initializer.h" />
     <ClInclude Include="utils\Model.h" />
+    <ClInclude Include="utils\SwapchainSupportDetails.h" />
     <ClInclude Include="utils\Texture.h" />
     <ClInclude Include="utils\Vertex.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="models\sphere.obj" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\sample.png" />

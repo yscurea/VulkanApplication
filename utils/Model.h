@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "Vertex.h"
+#include "./Vertex.h"
 
 class Model {
 public:

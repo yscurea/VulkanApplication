@@ -19,9 +19,6 @@
     <Filter Include="ソース ファイル\utils">
       <UniqueIdentifier>{b487f7b3-15b9-486f-90ee-bfa0bb749b9e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="リソース ファイル\models">
-      <UniqueIdentifier>{ab6b0425-db24-4a69-97f7-b7500145d6b2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="リソース ファイル\shaders">
       <UniqueIdentifier>{aff13f82-8999-4146-b09a-9a1a6ed075bc}</UniqueIdentifier>
     </Filter>
@@ -55,6 +52,12 @@
       <Filter>ソース ファイル\utils</Filter>
     </ClCompile>
     <ClCompile Include="utils\Vertex.cpp">
+      <Filter>ソース ファイル\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\DeviceQueueIndices.cpp">
+      <Filter>ソース ファイル\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="utils\SwapchainSupportDetails.cpp">
       <Filter>ソース ファイル\utils</Filter>
     </ClCompile>
   </ItemGroup>
@@ -99,11 +102,12 @@
     <ClInclude Include="utils\Vertex.h">
       <Filter>ヘッダー ファイル\utils</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Object Include="models\sphere.obj">
-      <Filter>リソース ファイル\models</Filter>
-    </Object>
+    <ClInclude Include="utils\DeviceQueueIndices.h">
+      <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="utils\SwapchainSupportDetails.h">
+      <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\sample.png">

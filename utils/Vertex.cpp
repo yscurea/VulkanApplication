@@ -1,10 +1,5 @@
 #include "Vertex.h"
 
-bool Vertex::operator==(const Vertex& other)const {
-	return pos == other.pos && color == other.color && tex_coord == other.tex_coord;
-}
-
-
 VkVertexInputBindingDescription Vertex::getBindingDescription() {
 	VkVertexInputBindingDescription binding_description{};
 	binding_description.binding = 0;
@@ -13,7 +8,6 @@ VkVertexInputBindingDescription Vertex::getBindingDescription() {
 
 	return binding_description;
 }
-
 
 
 std::array<VkVertexInputAttributeDescription, 3> Vertex::getAttributeDescriptions() {
@@ -36,3 +30,10 @@ std::array<VkVertexInputAttributeDescription, 3> Vertex::getAttributeDescription
 
 	return attribute_descriptions;
 }
+
+
+
+bool Vertex::operator==(const Vertex& other) const {
+	return (pos == other.pos && color == other.color && tex_coord == other.tex_coord);
+}
+
