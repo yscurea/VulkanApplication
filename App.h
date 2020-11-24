@@ -15,6 +15,7 @@
 #include "utils/Vertex.h"
 #include "utils/DeviceQueueIndices.h"
 #include "utils/SwapchainSupportDetails.h"
+#include "Camera.h"
 
 // todo: 各々が密接すぎてクラス分けが難しいけどクラスわけする
 	// 理想は ----- で区切っているものを全てクラスとして分離する
@@ -25,10 +26,12 @@
 /// </summary>
 class App {
 public:
+	App(uint32_t sphere_count);
 	void run();
 private:
 	void loadModel();
-	uint32_t sphere_count = 10;
+	Camera camera;
+	uint32_t sphere_count = 1000;
 	std::vector<Object> spheres;
 
 	void prepareCommand();

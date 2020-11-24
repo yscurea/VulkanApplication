@@ -47,6 +47,14 @@ void Object::allocateDescriptorSets(VkDevice& device, VkDescriptorSetAllocateInf
 }
 
 void Object::createUniformBuffer(VkDevice device, VkPhysicalDevice physical_device) {
+	std::random_device seed_gen;
+	this->position.x = (float)(seed_gen() % 30);
+	this->position.y = (float)(seed_gen() % 30);
+	this->position.z = (float)(seed_gen() % 30);
+	this->rotation.x = (float)(seed_gen() % 30);
+	this->rotation.y = (float)(seed_gen() % 30);
+	this->rotation.z = (float)(seed_gen() % 30);
+
 	VkBufferCreateInfo buffer_info{};
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	buffer_info.size = sizeof(UniformBufferObject);
@@ -67,13 +75,25 @@ void Object::createUniformBuffer(VkDevice device, VkPhysicalDevice physical_devi
 	alloc_info.memoryTypeIndex = findMemoryType(physical_device, memRequirements.memoryTypeBits, properties);
 
 	if (vkAllocateMemory(device, &alloc_info, nullptr, &this->device_memory) != VK_SUCCESS) {
-		throw std::runtime_error("failed to allocate buffer memory!");
+		throw std::runtime_error("failed to aVkDevice device, VkExtent2D swapchain_extentllocate buffer memory!");
 	}
 
 	vkBindBufferMemory(device, this->uniform_buffer, this->device_memory, 0);
 }
-void Object::updateUniformBuffer() {
+void Object::updateUniformBuffer(VkDevice device, Camera camera, VkExtent2D swapchain_extent) {
+	UniformBufferObject ubo{};
 
+	auto translate = glm::translate(glm::mat4(1.0f), this->position);
+	auto rotate = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	//auto scale = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 2.0f, 1.0f));
+	ubo.model = translate * rotate;
+	ubo.view = glm::lookAt(camera.position, camera.target_position, glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.proj = glm::perspective(camera.fov, swapchain_extent.width / (float)swapchain_extent.height, camera.near_clip, camera.far_clip);
+
+	void* data;
+	vkMapMemory(device, this->device_memory, 0, sizeof(ubo), 0, &data);
+	memcpy(data, &ubo, sizeof(ubo));
+	vkUnmapMemory(device, this->device_memory);
 }
 void Object::deleteUniformBuffer(VkDevice device) {
 	vkDestroyBuffer(device, this->uniform_buffer, nullptr);

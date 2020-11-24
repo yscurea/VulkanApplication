@@ -60,6 +60,9 @@
     <ClCompile Include="utils\UniformBufferObject.cpp">
       <Filter>ソース ファイル\utils</Filter>
     </ClCompile>
+    <ClCompile Include="Camera.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -107,6 +110,9 @@
     </ClInclude>
     <ClInclude Include="utils\UniformBufferObject.h">
       <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

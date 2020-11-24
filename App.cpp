@@ -8,6 +8,7 @@
 #include <set>
 #include <array>
 #include <algorithm>
+#include <random>
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -20,6 +21,9 @@ using std::cout;
 using std::endl;
 
 
+App::App(uint32_t sphere_count) {
+	this->sphere_count = sphere_count;
+}
 
 // vulkanの基本的な初期化
 void App::initVulkan() {
@@ -43,7 +47,6 @@ void App::initVulkan() {
 void App::run() {
 	this->initVulkan();
 	this->prepare();
-	cout << "prepare end" << endl;
 	while (!glfwWindowShouldClose(this->window)) {
 		glfwPollEvents();
 		this->render();
@@ -55,37 +58,25 @@ void App::run() {
 // アプリケーションの事前準備
 void App::prepare() {
 	this->loadModel();
-	cout << "load model" << endl;
 	this->spheres.resize(this->sphere_count);
-	cout << "init spheres" << endl;
 	this->createDescriptorSetLayout();
-	cout << "descriptorsetlayout" << endl;
 
 	// パイプライン作成、今回は単一
 	this->createGraphcisPipeline();
 
-	cout << "create pipeline" << endl;
 	// コマンドプール作成
 	this->createCommandPool();
-	cout << "create command pool" << endl;
 
 	this->createColorResources();
-	cout << "color" << endl;
 	this->createDepthResources();
-	cout << "depth" << endl;
 
 	this->createSwapchainFrameBuffers();
-	cout << "framebuffer" << endl;
 
 	// 各種リソース作成
 	this->prepareTexture();
-	cout << "texture" << endl;
 	this->createVertexBuffer();
-	cout << "vertex" << endl;
 	this->createIndexBuffer();
-	cout << "index" << endl;
 	this->createUniformBuffers();
-	cout << "uniform" << endl;
 
 
 	// デスクリプタ準備
@@ -1179,7 +1170,7 @@ void App::createUniformBuffers() {
 }
 void App::updateUniformBuffers() {
 	for (auto sphere : this->spheres) {
-		sphere.updateUniformBuffer();
+		sphere.updateUniformBuffer(this->device, this->camera, this->swapchain_extent);
 	}
 }
 

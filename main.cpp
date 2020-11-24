@@ -1,7 +1,10 @@
 #include "App.h"
 
+// todo: ƒNƒ‰ƒXİŒv‚ÌŒ©’¼‚µ
+
 int main() {
-	App* app = new App();
+	uint32_t sphere_count = 300;
+	App* app = new App(sphere_count);
 	app->run();
 	return 0;
 }
