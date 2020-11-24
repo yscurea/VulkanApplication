@@ -1174,8 +1174,9 @@ void App::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) 
 
 void App::createUniformBuffers() {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
-	for (auto sphere : this->spheres) {
-		createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sphere->uniform_buffer, sphere->device_memory);
+	for (auto& sphere : this->spheres) {
+		// createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sphere->uniform_buffer, sphere->device_memory);
+		sphere->createUniformBuffer(this->device, this->physical_device);
 	}
 
 }

@@ -3,6 +3,19 @@
 #include <stdexcept>
 #include <array>
 
+static uint32_t findMemoryType(VkPhysicalDevice physical_device, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+	VkPhysicalDeviceMemoryProperties memProperties;
+	vkGetPhysicalDeviceMemoryProperties(physical_device, &memProperties);
+	for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+		if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+			return i;
+		}
+	}
+	throw std::runtime_error("failed to find suitable memory type!");
+}
+
+
+
 void Object::bindDescriptorSets(VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout) {
 	vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &this->descriptor_set, 0, nullptr);
 }
@@ -31,6 +44,33 @@ void Object::allocateDescriptorSets(VkDevice& device, VkDescriptorSetAllocateInf
 	if (vkAllocateDescriptorSets(device, &allocate_info, &this->descriptor_set) != VK_SUCCESS) {
 		throw std::runtime_error("failed to allocate descriptor sets");
 	}
+}
+
+void Object::createUniformBuffer(VkDevice device, VkPhysicalDevice physical_device) {
+	VkBufferCreateInfo buffer_info{};
+	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_info.size = sizeof(UniformBufferObject);
+	buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateBuffer(device, &buffer_info, nullptr, &this->uniform_buffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create buffer!");
+	}
+
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(device, this->uniform_buffer, &memRequirements);
+
+	auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	VkMemoryAllocateInfo alloc_info{};
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.allocationSize = memRequirements.size;
+	alloc_info.memoryTypeIndex = findMemoryType(physical_device, memRequirements.memoryTypeBits, properties);
+
+	if (vkAllocateMemory(device, &alloc_info, nullptr, &this->device_memory) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate buffer memory!");
+	}
+
+	vkBindBufferMemory(device, this->uniform_buffer, this->device_memory, 0);
 }
 void Object::updateUniformBuffer() {
 
