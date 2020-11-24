@@ -29,7 +29,7 @@ public:
 private:
 	void loadModel();
 	uint32_t sphere_count = 10;
-	std::vector<Object*> spheres;
+	std::vector<Object> spheres;
 
 	void prepareCommand();
 	void updateUniformBuffers();

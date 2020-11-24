@@ -57,9 +57,6 @@ void App::prepare() {
 	this->loadModel();
 	cout << "load model" << endl;
 	this->spheres.resize(this->sphere_count);
-	for (auto sphere : this->spheres) {
-		sphere = new Object();
-	}
 	cout << "init spheres" << endl;
 	this->createDescriptorSetLayout();
 	cout << "descriptorsetlayout" << endl;
@@ -718,7 +715,7 @@ void App::deleteSwapchain() {
 	vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
 
 	for (auto sphere : this->spheres) {
-		sphere->deleteUniformBuffer(this->device);
+		sphere.deleteUniformBuffer(this->device);
 	}
 
 	vkDestroyDescriptorPool(this->device, this->descriptor_pool, nullptr);
@@ -1176,13 +1173,13 @@ void App::createUniformBuffers() {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 	for (auto& sphere : this->spheres) {
 		// createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sphere->uniform_buffer, sphere->device_memory);
-		sphere->createUniformBuffer(this->device, this->physical_device);
+		sphere.createUniformBuffer(this->device, this->physical_device);
 	}
 
 }
 void App::updateUniformBuffers() {
 	for (auto sphere : this->spheres) {
-		sphere->updateUniformBuffer();
+		sphere.updateUniformBuffer();
 	}
 }
 
@@ -1482,7 +1479,7 @@ void App::prepareCommand() {
 
 		// デスクリプタセットのみ各オブジェクト別に割り当てる
 		for (auto sphere : this->spheres) {
-			sphere->bindDescriptorSets(this->command_buffers[i], this->pipeline_layout);
+			sphere.bindDescriptorSets(this->command_buffers[i], this->pipeline_layout);
 			vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
 		}
 
@@ -1588,11 +1585,11 @@ void App::createDescriptorSets() {
 		allocate_info.descriptorPool = this->descriptor_pool;
 		allocate_info.descriptorSetCount = 1;
 		allocate_info.pSetLayouts = &this->descriptor_set_layout;
-		sphere->allocateDescriptorSets(this->device, allocate_info);
+		sphere.allocateDescriptorSets(this->device, allocate_info);
 
 		// テクスチャも共通のものを使う、何ならここではテクスチャいらない
 		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = sphere->uniform_buffer;
+		bufferInfo.buffer = sphere.uniform_buffer;
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(UniformBufferObject);
 		VkDescriptorImageInfo image_info{};
@@ -1600,7 +1597,7 @@ void App::createDescriptorSets() {
 		image_info.imageView = this->texture_image_view;
 		image_info.sampler = this->texture_sampler;
 
-		sphere->writeDescriptorSets(this->device, &bufferInfo, &image_info);
+		sphere.writeDescriptorSets(this->device, &bufferInfo, &image_info);
 	}
 }
 
