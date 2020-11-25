@@ -25,6 +25,12 @@
     <Filter Include="リソース ファイル\textures">
       <UniqueIdentifier>{b0e700d2-1387-4f90-9d33-976c8325fec6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ソース ファイル\AppBase">
+      <UniqueIdentifier>{90e23f33-4da9-4ca1-a11b-4bf2a247351e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\AppBase">
+      <UniqueIdentifier>{7f3a6ff4-5120-4da6-8e23-e68ba6b0430d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -65,6 +71,9 @@
     </ClCompile>
     <ClCompile Include="utils\Device.cpp">
       <Filter>ソース ファイル\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\AppBase.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -119,6 +128,9 @@
     </ClInclude>
     <ClInclude Include="utils\Device.h">
       <Filter>ヘッダー ファイル\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\AppBase.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
