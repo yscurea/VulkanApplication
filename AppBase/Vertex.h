@@ -17,6 +17,7 @@ struct Vertex {
 	bool operator==(const Vertex& other) const;
 };
 
+// unordered_mapのキーにするためのハッシュ関数を定義
 namespace std {
 	template<> struct hash<Vertex> {
 		size_t operator()(Vertex const& vertex) const {

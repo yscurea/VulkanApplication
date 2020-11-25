@@ -4,13 +4,14 @@
 
 #include <vulkan/vulkan.h>
 
+#include "PhysicalDevice.h"
+
 #include "DeviceQueueIndices.h"
 #include "SwapchainSupportDetails.h"
 
 class Device {
 private:
-	// GPU
-	VkPhysicalDevice physical_device;
+	PhysicalDevice physical_device;
 	// 論理デバイス
 	VkDevice device;
 	// デバイス拡張

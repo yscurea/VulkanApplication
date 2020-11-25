@@ -2,13 +2,19 @@
 
 #include <vulkan/vulkan.h>
 
-#include "../utils/Device.h"
+#include "./Window.h"
+#include "./Surface.h"
+#include "./Debug.h"
+#include "./Device.h"
 
 namespace vulkan::base {
 
 	// vulkanを使ったアプリのベース
 	class AppBase {
+		Window window;
 		VkInstance instance;
+		Debug debug;
+		Surface surface;
 		Device device;
 
 		VkCommandPool command_pool;
