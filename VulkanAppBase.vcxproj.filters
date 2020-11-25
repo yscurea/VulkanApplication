@@ -75,6 +75,45 @@
     <ClCompile Include="AppBase\AppBase.cpp">
       <Filter>ソース ファイル\AppBase</Filter>
     </ClCompile>
+    <ClCompile Include="AppBase\Swapchain.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\Texture.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\UniformBufferObject.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\utils.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\Vertex.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\Window.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\Buffer.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\Device.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\DeviceQueueIndices.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\Surface.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\Debug.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\Mesh.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
+    <ClCompile Include="AppBase\PhysicalDevice.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -130,6 +169,45 @@
       <Filter>ヘッダー ファイル\utils</Filter>
     </ClInclude>
     <ClInclude Include="AppBase\AppBase.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Swapchain.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Texture.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\UniformBufferObject.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\utils.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Vertex.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Window.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Buffer.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Device.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\DeviceQueueIndices.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Surface.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Debug.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Mesh.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\PhysicalDevice.h">
       <Filter>ヘッダー ファイル\AppBase</Filter>
     </ClInclude>
   </ItemGroup>

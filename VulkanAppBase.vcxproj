@@ -161,6 +161,19 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="AppBase\AppBase.cpp" />
+    <ClCompile Include="AppBase\Buffer.cpp" />
+    <ClCompile Include="AppBase\Debug.cpp" />
+    <ClCompile Include="AppBase\Device.cpp" />
+    <ClCompile Include="AppBase\DeviceQueueIndices.cpp" />
+    <ClCompile Include="AppBase\Mesh.cpp" />
+    <ClCompile Include="AppBase\PhysicalDevice.cpp" />
+    <ClCompile Include="AppBase\Surface.cpp" />
+    <ClCompile Include="AppBase\Swapchain.cpp" />
+    <ClCompile Include="AppBase\Texture.cpp" />
+    <ClCompile Include="AppBase\UniformBufferObject.cpp" />
+    <ClCompile Include="AppBase\utils.cpp" />
+    <ClCompile Include="AppBase\Vertex.cpp" />
+    <ClCompile Include="AppBase\Window.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Object.cpp" />
@@ -185,6 +198,19 @@
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="AppBase\AppBase.h" />
+    <ClInclude Include="AppBase\Buffer.h" />
+    <ClInclude Include="AppBase\Debug.h" />
+    <ClInclude Include="AppBase\Device.h" />
+    <ClInclude Include="AppBase\DeviceQueueIndices.h" />
+    <ClInclude Include="AppBase\Mesh.h" />
+    <ClInclude Include="AppBase\PhysicalDevice.h" />
+    <ClInclude Include="AppBase\Surface.h" />
+    <ClInclude Include="AppBase\Swapchain.h" />
+    <ClInclude Include="AppBase\Texture.h" />
+    <ClInclude Include="AppBase\UniformBufferObject.h" />
+    <ClInclude Include="AppBase\utils.h" />
+    <ClInclude Include="AppBase\Vertex.h" />
+    <ClInclude Include="AppBase\Window.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="utils\Buffer.h" />
