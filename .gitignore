@@ -362,10 +362,3 @@ MigrationBackup/
 FodyWeavers.xsd
 
 
-
-
-# ignore model data
-models/
-
-# ignore texture file
-textures/
