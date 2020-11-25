@@ -88,7 +88,7 @@ private:
 	void selectPhysicalDevice();
 	DeviceQueueIndices findDeviceQueue(VkPhysicalDevice physical_device);
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+	SwapchainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 	bool isDeviceSuitable(VkPhysicalDevice physical_device);
 	VkDevice device;
 	void createLogicalDevice();

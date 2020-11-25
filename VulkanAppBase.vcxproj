@@ -164,6 +164,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Object.cpp" />
     <ClCompile Include="utils\Buffer.cpp" />
+    <ClCompile Include="utils\Device.cpp" />
     <ClCompile Include="utils\DeviceQueueIndices.cpp" />
     <ClCompile Include="utils\Initializer.cpp" />
     <ClCompile Include="utils\SwapchainSupportDetails.cpp" />
@@ -185,6 +186,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Object.h" />
     <ClInclude Include="utils\Buffer.h" />
+    <ClInclude Include="utils\Device.h" />
     <ClInclude Include="utils\DeviceQueueIndices.h" />
     <ClInclude Include="utils\Initializer.h" />
     <ClInclude Include="utils\SwapchainSupportDetails.h" />

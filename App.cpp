@@ -466,8 +466,8 @@ bool App::checkDeviceExtensionSupport(VkPhysicalDevice physical_device) {
 	}
 	return requiredExtensions.empty();
 }
-SwapChainSupportDetails App::querySwapChainSupport(VkPhysicalDevice device) {
-	SwapChainSupportDetails details;
+SwapchainSupportDetails App::querySwapChainSupport(VkPhysicalDevice device) {
+	SwapchainSupportDetails details;
 
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, this->surface, &details.capabilities);
 
@@ -498,7 +498,7 @@ bool App::isDeviceSuitable(VkPhysicalDevice physical_device) {
 
 	bool swapchain_adequate = false;
 	if (extensions_supported) {
-		SwapChainSupportDetails swapchain_support = querySwapChainSupport(physical_device);
+		SwapchainSupportDetails swapchain_support = querySwapChainSupport(physical_device);
 		swapchain_adequate = !swapchain_support.formats.empty() && !swapchain_support.presentModes.empty();
 	}
 
@@ -596,7 +596,7 @@ static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFor
 		if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 			return availableFormat;
 		}
-}
+	}
 
 	return available_formats[0];
 }
@@ -629,7 +629,7 @@ static VkExtent2D chooseSwapExtent(GLFWwindow* window, const VkSurfaceCapabiliti
 }
 
 void App::createSwapchain() {
-	SwapChainSupportDetails swapchain_support = querySwapChainSupport(this->physical_device);
+	SwapchainSupportDetails swapchain_support = querySwapChainSupport(this->physical_device);
 
 	VkSurfaceFormatKHR surface_format = chooseSwapSurfaceFormat(swapchain_support.formats);
 	VkPresentModeKHR present_mode = chooseSwapPresentMode(swapchain_support.presentModes);
