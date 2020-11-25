@@ -4,14 +4,21 @@
 
 #include "../utils/Device.h"
 
-// vulkanを使ったアプリのベース
-class AppBase {
-	VkInstance instance;
-	Device device;
-public:
-	void init();
+namespace vulkan::base {
 
-	virtual void renderLoop();
+	// vulkanを使ったアプリのベース
+	class AppBase {
+		VkInstance instance;
+		Device device;
 
-	virtual void cleanup();
-};
+		VkCommandPool command_pool;
+		void createCommandPool();
+	public:
+		void init();
+
+		virtual void renderLoop();
+
+		virtual void cleanup();
+	};
+
+}

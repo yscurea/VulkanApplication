@@ -1,14 +1,18 @@
 #include "AppBase.h"
 
 
-void AppBase::init() {
+namespace vulkan::base {
 
-}
+	void AppBase::init() {
 
-void AppBase::renderLoop() {
+	}
 
-}
+	void AppBase::renderLoop() {
 
-void AppBase::cleanup() {
+	}
+
+	void AppBase::cleanup() {
+
+	}
 
 }
