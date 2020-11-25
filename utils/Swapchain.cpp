@@ -52,3 +52,45 @@ void Swapchain::createSwapchain() {
 
 	this->createSwapchainImageViews();
 }
+
+void Swapchain::deleteSwapchain() {
+	vkDestroyImageView(this->device, this->depth_image_view, nullptr);
+	vkDestroyImage(this->device, this->depth_image, nullptr);
+	vkFreeMemory(this->device, this->depth_image_memory, nullptr);
+
+	for (auto framebuffer : swapchain_framebuffers) {
+		vkDestroyFramebuffer(this->device, framebuffer, nullptr);
+	}
+
+	vkFreeCommandBuffers(this->device, command_pool, static_cast<uint32_t>(this->command_buffers.size()), this->command_buffers.data());
+
+	vkDestroyPipeline(this->device, this->graphics_pipeline, nullptr);
+	vkDestroyPipelineLayout(this->device, this->pipeline_layout, nullptr);
+	vkDestroyRenderPass(this->device, this->render_pass, nullptr);
+
+	for (auto imageView : this->swapchain_image_views) {
+		vkDestroyImageView(device, imageView, nullptr);
+	}
+
+	vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
+
+	for (auto sphere : this->spheres) {
+		sphere.deleteUniformBuffer(this->device);
+	}
+
+	vkDestroyDescriptorPool(this->device, this->descriptor_pool, nullptr);
+}
+
+void Swapchain::createSwapchainImageViews() {
+	this->swapchain_image_views.resize(this->swapchain_images.size());
+
+	for (uint32_t i = 0; i < this->swapchain_images.size(); i++) {
+		this->swapchain_image_views[i] = createImageView(this->swapchain_images[i], this->swapchain_image_format, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+	}
+}
+
+void Swapchain::deleteSwapchainImageViews() {
+	for (auto image_view : this->swapchain_image_views) {
+		vkDestroyImageView(this->device, image_view, nullptr);
+	}
+}
