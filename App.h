@@ -144,6 +144,9 @@ private:
 	VkRenderPass render_pass;
 	virtual void createRenderPass();
 	void deleteRenderPass();
+	VkRenderPass offscreen_render_pass;
+	void createOffscreenRenderPass();
+	void deleteOffscreenRenderPass();
 
 	// ------------------------------ command ----------------------------------------
 
