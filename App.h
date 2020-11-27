@@ -141,9 +141,12 @@ private:
 
 	// ------------------------------ render pass ----------------------------------------
 
+	// 通常のレンダリングパス
 	VkRenderPass render_pass;
 	virtual void createRenderPass();
 	void deleteRenderPass();
+
+	// オフスクリーンレンダリングパス（光源からみた深度値計算）
 	VkRenderPass offscreen_render_pass;
 	void createOffscreenRenderPass();
 	void deleteOffscreenRenderPass();

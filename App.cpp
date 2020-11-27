@@ -881,6 +881,60 @@ void App::deleteRenderPass() {
 	vkDestroyRenderPass(this->device, this->render_pass, nullptr);
 }
 
+void App::createOffscreenRenderPass() {
+	VkAttachmentDescription attachment_description{};
+	attachment_description.format = VK_FORMAT_D16_UNORM;
+	attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
+	attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	attachment_description.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	attachment_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+
+	VkAttachmentReference depth_reference = {};
+	depth_reference.attachment = 0;
+	depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass = {};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 0;
+	subpass.pDepthStencilAttachment = &depth_reference;
+
+	std::array<VkSubpassDependency, 2> dependencies;
+	dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependencies[0].dstSubpass = 0;
+	dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+	dependencies[1].srcSubpass = 0;
+	dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+	dependencies[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	dependencies[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+	dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+	VkRenderPassCreateInfo render_pass_create_info{};
+	render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	render_pass_create_info.attachmentCount = 1;
+	render_pass_create_info.pAttachments = &attachment_description;
+	render_pass_create_info.subpassCount = 1;
+	render_pass_create_info.pSubpasses = &subpass;
+	render_pass_create_info.dependencyCount = static_cast<uint32_t>(dependencies.size());
+	render_pass_create_info.pDependencies = dependencies.data();
+
+	if (vkCreateRenderPass(this->device, &render_pass_create_info, nullptr, &this->offscreen_render_pass) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create offscreen render pass");
+	}
+
+}
+void App::deleteOffscreenRenderPass() {
+	vkDestroyRenderPass(this->device, this->offscreen_render_pass, nullptr);
+}
+
 
 // ------------------------------ graphics pipeline ------------------------------------
 
@@ -1438,39 +1492,85 @@ void App::prepareCommand() {
 		if (vkBeginCommandBuffer(this->command_buffers[i], &begin_info) != VK_SUCCESS) {
 			throw std::runtime_error("failed to begin recording command buffer!");
 		}
-		VkRenderPassBeginInfo render_pass_info{};
-		render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		render_pass_info.renderPass = this->render_pass;
-		render_pass_info.framebuffer = this->swapchain_framebuffers[i];
-		render_pass_info.renderArea.offset = { 0, 0 };
-		render_pass_info.renderArea.extent = this->swapchain_extent;
 
-		std::array<VkClearValue, 2> clearValues{};
-		clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
-		clearValues[1].depthStencil = { 1.0f, 0 };
+		{
+			// 1番目のパス : 光源から見た深度レンダリング
+			// offscreen rendering
 
-		render_pass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
-		render_pass_info.pClearValues = clearValues.data();
+			// todo : prepare offscreen framebuffer
+			VkRenderPassBeginInfo render_pass_info{};
+			render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			render_pass_info.renderPass = this->offscreen_render_pass;
+			// render_pass_info.framebuffer = this->swapchain_framebuffers[i];
+			render_pass_info.renderArea.offset = { 0, 0 };
+			// render_pass_info.renderArea.extent = this->swapchain_extent;
 
-		vkCmdBeginRenderPass(this->command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+			std::array<VkClearValue, 2> clearValues{};
+			clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			clearValues[1].depthStencil = { 1.0f, 0 };
 
-		// 共通のパイプライン
-		vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
+			render_pass_info.clearValueCount = 1;
+			// render_pass_info.pClearValues = clearValues.data();
 
-		// 共通の頂点を使用する
-		VkBuffer vertexBuffers[] = { this->vertex_buffer };
-		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(this->command_buffers[i], 0, 1, vertexBuffers, offsets);
-		vkCmdBindIndexBuffer(this->command_buffers[i], this->index_buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBeginRenderPass(this->command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+			// 共通のパイプライン
+			vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
+
+			// 共通の頂点を使用する
+			VkBuffer vertexBuffers[] = { this->vertex_buffer };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(this->command_buffers[i], 0, 1, vertexBuffers, offsets);
+			vkCmdBindIndexBuffer(this->command_buffers[i], this->index_buffer, 0, VK_INDEX_TYPE_UINT32);
 
 
-		// デスクリプタセットのみ各オブジェクト別に割り当てる
-		for (auto sphere : this->spheres) {
-			sphere.bindDescriptorSets(this->command_buffers[i], this->pipeline_layout);
-			vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
+			// デスクリプタセットのみ各オブジェクト別に割り当てる
+			for (auto sphere : this->spheres) {
+				sphere.bindDescriptorSets(this->command_buffers[i], this->pipeline_layout);
+				vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
+			}
+
+			vkCmdEndRenderPass(this->command_buffers[i]);
 		}
 
-		vkCmdEndRenderPass(this->command_buffers[i]);
+
+		{
+			// 2番目のパス : シーンレンダリング
+			// 普通に画面に出力するやつ
+			VkRenderPassBeginInfo render_pass_info{};
+			render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			render_pass_info.renderPass = this->render_pass;
+			render_pass_info.framebuffer = this->swapchain_framebuffers[i];
+			render_pass_info.renderArea.offset = { 0, 0 };
+			render_pass_info.renderArea.extent = this->swapchain_extent;
+
+			std::array<VkClearValue, 2> clearValues{};
+			clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			clearValues[1].depthStencil = { 1.0f, 0 };
+
+			render_pass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
+			render_pass_info.pClearValues = clearValues.data();
+
+			vkCmdBeginRenderPass(this->command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+			// 共通のパイプライン
+			vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
+
+			// 共通の頂点を使用する
+			VkBuffer vertex_buffers[] = { this->vertex_buffer };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(this->command_buffers[i], 0, 1, vertex_buffers, offsets);
+			vkCmdBindIndexBuffer(this->command_buffers[i], this->index_buffer, 0, VK_INDEX_TYPE_UINT32);
+
+
+			// デスクリプタセットのみ各オブジェクト別に割り当てる
+			for (auto sphere : this->spheres) {
+				sphere.bindDescriptorSets(this->command_buffers[i], this->pipeline_layout);
+				vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
+			}
+
+			vkCmdEndRenderPass(this->command_buffers[i]);
+		}
 
 		// コマンド記録終了
 		if (vkEndCommandBuffer(this->command_buffers[i]) != VK_SUCCESS) {
