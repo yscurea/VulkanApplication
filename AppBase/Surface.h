@@ -6,6 +6,7 @@
 
 class Surface {
 	VkSurfaceKHR surface;
+public:
 	void createSurface();
 	void deleteSurface();
 };

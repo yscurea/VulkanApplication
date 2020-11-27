@@ -21,6 +21,8 @@ public:
 	void selectPhysicalDevice();
 	// GPUが最適かどうか確認する
 	bool isDeviceSuitable(VkPhysicalDevice physical_device);
+	// queueを更新する
+	void updateDeviceQueue();
 	// デバイス拡張が対応しているかどうか確認する
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device);
 };
