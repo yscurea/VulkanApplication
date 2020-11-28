@@ -171,8 +171,9 @@ private:
 	VkPipeline graphics_pipeline;
 	void createGraphcisPipeline();
 
-	VkPipeline offscreen;
+	VkPipeline offscreen_pipeline;
 	void createOffscreenPipeline();
+	void preparePipelines();
 
 
 
