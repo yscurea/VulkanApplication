@@ -39,7 +39,6 @@ private:
 	std::vector<Object> spheres;
 
 	void prepareCommand();
-	void updateUniformBuffers();
 
 	void prepare();
 	void render();
@@ -116,11 +115,15 @@ private:
 	void createSwapchainImageViews();
 	void deleteSwapchainImageViews();
 	VkExtent2D swapchain_extent;
+
 	// framebuffer
 	std::vector<VkFramebuffer> swapchain_framebuffers;
 	bool framebuffer_resized = false;
 	void createSwapchainFrameBuffers();
 	void deleteSwapchainFrameBuffers();
+	// offscreen framebuffer
+	void createOffscreenFrameBuffer();
+	void deleteOffscreenFrameBuffer();
 
 	VkImage color_image;
 	VkDeviceMemory color_image_memory;
@@ -228,7 +231,9 @@ private:
 
 	// ユニフォームバッファ（定数バッファ）
 	void createUniformBuffers();
-
+	// void createUniformBufferOffscreen();
+	void updateUniformBuffers();
+	void updateUniformBufferOffscreen();
 
 	// ------------------------------ shader ----------------------------------------
 

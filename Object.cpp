@@ -109,6 +109,32 @@ void Object::createUniformBuffer(VkDevice device, VkPhysicalDevice physical_devi
 
 	vkBindBufferMemory(device, this->uniform_buffer, this->device_memory, 0);
 }
+void Object::createUniformBufferOffscreen(VkDevice device, VkPhysicalDevice physical_device) {
+	VkBufferCreateInfo buffer_info{};
+	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_info.size = sizeof(OffscreenUniformBufferObject);
+	buffer_info.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	if (vkCreateBuffer(device, &buffer_info, nullptr, &this->offscreen_uniform_buffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create buffer!");
+	}
+
+	VkMemoryRequirements memRequirements;
+	vkGetBufferMemoryRequirements(device, this->offscreen_uniform_buffer, &memRequirements);
+
+	auto properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	VkMemoryAllocateInfo alloc_info{};
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.allocationSize = memRequirements.size;
+	alloc_info.memoryTypeIndex = findMemoryType(physical_device, memRequirements.memoryTypeBits, properties);
+
+	if (vkAllocateMemory(device, &alloc_info, nullptr, &this->offscreen_device_memory) != VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate memory,");
+	}
+
+	vkBindBufferMemory(device, this->offscreen_uniform_buffer, this->offscreen_device_memory, 0);
+}
 void Object::updateUniformBuffer(VkDevice device, Camera camera, VkExtent2D swapchain_extent) {
 	UniformBufferObject ubo{};
 
