@@ -161,8 +161,10 @@
   <ItemGroup>
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Light.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Object.cpp" />
+    <ClCompile Include="OffscreenUniformBufferObject.cpp" />
     <ClCompile Include="utils\Buffer.cpp" />
     <ClCompile Include="utils\DeviceQueueIndices.cpp" />
     <ClCompile Include="utils\Initializer.cpp" />
@@ -183,7 +185,9 @@
   <ItemGroup>
     <ClInclude Include="App.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Light.h" />
     <ClInclude Include="Object.h" />
+    <ClInclude Include="OffscreenUniformBufferObject.h" />
     <ClInclude Include="utils\Buffer.h" />
     <ClInclude Include="utils\DeviceQueueIndices.h" />
     <ClInclude Include="utils\Initializer.h" />
