@@ -31,6 +31,7 @@ public:
 private:
 	void loadModel();
 	Camera camera;
+	glm::vec3 light_position = glm::vec3(10.0f, 10.0f, 10.0f);
 	uint32_t sphere_count = 1000;
 	std::vector<Object> spheres;
 
@@ -100,6 +101,7 @@ private:
 
 
 	// ------------------------------ swapchain ----------------------------------------
+
 	VkSwapchainKHR swapchain;
 	VkFormat swapchain_image_format;
 	void createSwapchain();
@@ -168,6 +170,9 @@ private:
 	VkPipelineLayout pipeline_layout;
 	VkPipeline graphics_pipeline;
 	void createGraphcisPipeline();
+
+	VkPipeline offscreen;
+	void createOffscreenPipeline();
 
 
 

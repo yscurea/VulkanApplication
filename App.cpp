@@ -1526,7 +1526,7 @@ void App::prepareCommand() {
 
 			// デスクリプタセットのみ各オブジェクト別に割り当てる
 			for (auto sphere : this->spheres) {
-				sphere.bindDescriptorSets(this->command_buffers[i], this->pipeline_layout);
+				sphere.bindGraphicsDescriptorSets(this->command_buffers[i], this->pipeline_layout);
 				vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
 			}
 
@@ -1565,7 +1565,7 @@ void App::prepareCommand() {
 
 			// デスクリプタセットのみ各オブジェクト別に割り当てる
 			for (auto sphere : this->spheres) {
-				sphere.bindDescriptorSets(this->command_buffers[i], this->pipeline_layout);
+				sphere.bindGraphicsDescriptorSets(this->command_buffers[i], this->pipeline_layout);
 				vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
 			}
 
@@ -1672,19 +1672,19 @@ void App::createDescriptorSets() {
 		allocate_info.descriptorPool = this->descriptor_pool;
 		allocate_info.descriptorSetCount = 1;
 		allocate_info.pSetLayouts = &this->descriptor_set_layout;
-		sphere.allocateDescriptorSets(this->device, allocate_info);
+		sphere.allocateGraphicsDescriptorSets(this->device, allocate_info);
 
-		// テクスチャも共通のものを使う、何ならここではテクスチャいらない
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = sphere.uniform_buffer;
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
+		// テクスチャも共通のものを使う、何ならここではテクスチャいらないかも
+		VkDescriptorBufferInfo buffer_info{};
+		buffer_info.buffer = sphere.uniform_buffer;
+		buffer_info.offset = 0;
+		buffer_info.range = sizeof(UniformBufferObject);
 		VkDescriptorImageInfo image_info{};
 		image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		image_info.imageView = this->texture_image_view;
 		image_info.sampler = this->texture_sampler;
 
-		sphere.writeDescriptorSets(this->device, &bufferInfo, &image_info);
+		sphere.writeGraphicsDescriptorSets(this->device, &buffer_info, &image_info);
 	}
 }
 
