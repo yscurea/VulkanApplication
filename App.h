@@ -11,6 +11,9 @@
 #include <vector>
 #include <optional>
 
+
+#include "utils/utils.h"
+
 #include "Object.h"
 #include "utils/Vertex.h"
 #include "utils/DeviceQueueIndices.h"
