@@ -150,6 +150,18 @@ void Object::updateUniformBuffer(VkDevice device, Camera camera, VkExtent2D swap
 	memcpy(data, &ubo, sizeof(ubo));
 	vkUnmapMemory(device, this->device_memory);
 }
+void Object::updateUniformBufferOffscreen(VkDevice device, Light light, VkExtent2D swapchain_extent) {
+	OffscreenUniformBufferObject oubo{};
+
+	oubo.model = glm::mat4(1.0f);
+	oubo.view = glm::lookAt(light.position, glm::vec3(0.0f), glm::vec3(0, 1, 0));
+	oubo.projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 100.0f);
+
+	void* data;
+	vkMapMemory(device, this->offscreen_device_memory, 0, sizeof(oubo), 0, &data);
+	memcpy(data, &oubo, sizeof(oubo));
+	vkUnmapMemory(device, this->offscreen_device_memory);
+}
 void Object::deleteUniformBuffer(VkDevice device) {
 	vkDestroyBuffer(device, this->uniform_buffer, nullptr);
 	vkFreeMemory(device, this->device_memory, nullptr);

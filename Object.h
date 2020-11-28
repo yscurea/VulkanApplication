@@ -7,6 +7,7 @@
 
 
 #include "Camera.h"
+#include "Light.h"
 #include "utils/Buffer.h"
 #include "utils/Texture.h"
 #include "utils/UniformBufferObject.h"
@@ -35,7 +36,7 @@ public:
 	void createUniformBuffer(VkDevice device, VkPhysicalDevice physical_device);
 	void createUniformBufferOffscreen(VkDevice device, VkPhysicalDevice physical_device);
 	void updateUniformBuffer(VkDevice device, Camera camera, VkExtent2D swapchain_extent);
-	void updateUniformBufferOffscreen(VkDevice device, Camera camera, VkExtent2D swapchain_extent);
+	void updateUniformBufferOffscreen(VkDevice device, Light light, VkExtent2D swapchain_extent);
 
 	void deleteUniformBuffer(VkDevice device);
 };

@@ -96,6 +96,7 @@ void App::render() {
 	VkResult result = vkAcquireNextImageKHR(this->device, this->swapchain, UINT64_MAX, this->image_available_semaphores[this->current_frame], VK_NULL_HANDLE, &image_index);
 
 	this->updateUniformBuffers();
+	this->updateUniformBufferOffscreen();
 
 	VkSubmitInfo submit_info{};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -750,32 +751,38 @@ void App::deleteSwapchainFrameBuffers() {
 	}
 }
 void App::createOffscreenFrameBuffer() {
+	// todo : ‚±‚±‚©‚çÄŠJ
+
 	offscreen_pass.width = SHADOWMAP_DIM;
 	offscreen_pass.height = SHADOWMAP_DIM;
 
 	// For shadow mapping we only need a depth attachment
-	VkImageCreateInfo image = vks::initializers::imageCreateInfo();
-	image.imageType = VK_IMAGE_TYPE_2D;
-	image.extent.width = offscreenPass.width;
-	image.extent.height = offscreenPass.height;
-	image.extent.depth = 1;
-	image.mipLevels = 1;
-	image.arrayLayers = 1;
-	image.samples = VK_SAMPLE_COUNT_1_BIT;
-	image.tiling = VK_IMAGE_TILING_OPTIMAL;
-	image.format = DEPTH_FORMAT;																// Depth stencil attachment
-	image.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;		// We will sample directly from the depth attachment for the shadow mapping
-	if (vkCreateImage(device, &image, nullptr, &offscreenPass.depth.image) != VK_SUCCESS) {
+	VkImageCreateInfo image_create_info = vks::initializers::imageCreateInfo();
+	image_create_info.imageType = VK_IMAGE_TYPE_2D;
+	image_create_info.extent.width = offscreenPass.width;
+	image_create_info.extent.height = offscreenPass.height;
+	image_create_info.extent.depth = 1;
+	image_create_info.mipLevels = 1;
+	image_create_info.arrayLayers = 1;
+	image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+	image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+	image_create_info.format = DEPTH_FORMAT;																// Depth stencil attachment
+	image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;		// We will sample directly from the depth attachment for the shadow mapping
+	if (vkCreateImage(device, &image_create_info, nullptr, &offscreenPass.depth.image) != VK_SUCCESS) {
 		throw std::runtime_error("failed to creat image in creating offscreen render pass");
 	}
 
-	VkMemoryAllocateInfo memAlloc = vks::initializers::memoryAllocateInfo();
-	VkMemoryRequirements memReqs;
-	vkGetImageMemoryRequirements(device, offscreenPass.depth.image, &memReqs);
-	memAlloc.allocationSize = memReqs.size;
-	memAlloc.memoryTypeIndex = vulkanDevice->getMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VK_CHECK_RESULT(vkAllocateMemory(device, &memAlloc, nullptr, &offscreenPass.depth.mem));
-	VK_CHECK_RESULT(vkBindImageMemory(device, offscreenPass.depth.image, offscreenPass.depth.mem, 0));
+	VkMemoryAllocateInfo memory_allocate_info = vks::initializers::memoryAllocateInfo();
+	VkMemoryRequirements memory_requirements;
+	vkGetImageMemoryRequirements(device, offscreenPass.depth.image, &memory_requirements);
+	memory_allocate_info.allocationSize = memory_requirements.size;
+	memory_allocate_info.memoryTypeIndex = vulkanDevice->getMemoryType(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	if (vkAllocateMemory(this->device, &memory_allocate_info, nullptr, &offscreenPass.depth.mem) = VK_SUCCESS) {
+		throw std::runtime_error("failed to allocate memory in createOffscreenFrameBuffer");
+	}
+	if (vkBindImageMemory(this->device, offscreenPass.depth.image, offscreenPass.depth.mem, 0) = VK_SUCCESS) {
+		throw std::runtime_error("failed to bind memory in createOffscreenFrameBuffer");
+	}
 
 	VkImageViewCreateInfo depthStencilView = vks::initializers::imageViewCreateInfo();
 	depthStencilView.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -787,10 +794,10 @@ void App::createOffscreenFrameBuffer() {
 	depthStencilView.subresourceRange.baseArrayLayer = 0;
 	depthStencilView.subresourceRange.layerCount = 1;
 	depthStencilView.image = offscreenPass.depth.image;
-	VK_CHECK_RESULT(vkCreateImageView(device, &depthStencilView, nullptr, &offscreenPass.depth.view));
+	if (vkCreateImageView(device, &depthStencilView, nullptr, &offscreenPass.depth.view) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create image view in createOffscreenFrameBuffers");
+	}
 
-	// Create sampler to sample from to depth attachment
-	// Used to sample in the fragment shader for shadowed rendering
 	VkFilter shadowmap_filter = vks::tools::formatIsFilterable(this->physical_device, DEPTH_FORMAT, VK_IMAGE_TILING_OPTIMAL) ?
 		DEFAULT_SHADOWMAP_FILTER :
 		VK_FILTER_NEAREST;
@@ -806,20 +813,24 @@ void App::createOffscreenFrameBuffer() {
 	sampler.minLod = 0.0f;
 	sampler.maxLod = 1.0f;
 	sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-	VK_CHECK_RESULT(vkCreateSampler(device, &sampler, nullptr, &offscreenPass.depthSampler));
+	if (vkCreateSampler(device, &sampler, nullptr, &offscreenPass.depthSampler) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create sampler in createOffscreenFrameBuffers");
+	}
 
 	this->createOffscreenRenderPass();
 
 	// Create frame buffer
-	VkFramebufferCreateInfo fbufCreateInfo = vks::initializers::framebufferCreateInfo();
-	fbufCreateInfo.renderPass = offscreenPass.renderPass;
-	fbufCreateInfo.attachmentCount = 1;
-	fbufCreateInfo.pAttachments = &offscreenPass.depth.view;
-	fbufCreateInfo.width = offscreenPass.width;
-	fbufCreateInfo.height = offscreenPass.height;
-	fbufCreateInfo.layers = 1;
+	VkFramebufferCreateInfo framebuffer_create_info = vks::initializers::framebufferCreateInfo();
+	framebuffer_create_info.renderPass = offscreenPass.renderPass;
+	framebuffer_create_info.attachmentCount = 1;
+	framebuffer_create_info.pAttachments = &offscreenPass.depth.view;
+	framebuffer_create_info.width = offscreenPass.width;
+	framebuffer_create_info.height = offscreenPass.height;
+	framebuffer_create_info.layers = 1;
 
-	VK_CHECK_RESULT(vkCreateFramebuffer(device, &fbufCreateInfo, nullptr, &offscreenPass.frameBuffer));
+	if (vkCreateFramebuffer(this->device, &framebuffer_create_info, nullptr, &offscreenPass.frameBuffer) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create offscreen_framebuffer");
+	}
 }
 void App::deleteOffscreenFrameBuffer() {
 }
@@ -1317,8 +1328,9 @@ void App::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) 
 void App::createUniformBuffers() {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 	for (auto& sphere : this->spheres) {
-		// createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sphere->uniform_buffer, sphere->device_memory);
+		//// createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, sphere->uniform_buffer, sphere->device_memory);
 		sphere.createUniformBuffer(this->device, this->physical_device);
+		sphere.createUniformBufferOffscreen(this->device, this->physical_device);
 	}
 
 }
@@ -1328,7 +1340,9 @@ void App::updateUniformBuffers() {
 	}
 }
 void App::updateUniformBufferOffscreen() {
-
+	for (auto sphere : this->spheres) {
+		sphere.updateUniformBufferOffscreen(this->device, this->light, this->swapchain_extent);
+	}
 }
 
 

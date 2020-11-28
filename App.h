@@ -34,7 +34,7 @@ public:
 private:
 	void loadModel();
 	Camera camera;
-	glm::vec3 light_position = glm::vec3(10.0f, 10.0f, 10.0f);
+	Light light;
 	uint32_t sphere_count = 1000;
 	std::vector<Object> spheres;
 
