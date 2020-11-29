@@ -7,6 +7,7 @@ layout (location = 1) in vec3 inColor;
 layout (location = 2) in vec3 inViewVec;
 layout (location = 3) in vec3 inLightVec;
 layout (location = 4) in vec4 inShadowCoord;
+layout (location = 5) in vec2 inUV;
 
 layout (constant_id = 0) const int enablePCF = 0;
 
@@ -61,6 +62,6 @@ void main()
 	vec3 R = normalize(-reflect(L, N));
 	vec3 diffuse = max(dot(N, L), ambient) * inColor;
 
-	outFragColor = vec4(diffuse * shadow, 1.0);
-
+	// outFragColor = vec4(diffuse * shadow, 1.0);
+	outFragColor = texture(shadowMap,inUV);
 }

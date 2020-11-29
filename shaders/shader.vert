@@ -10,7 +10,9 @@ layout (binding = 0) uniform UBO
 	mat4 model;
 	mat4 view;
 	mat4 projection;
-	mat4 lightSpace;
+	mat4 depth_light_model;
+	mat4 depth_light_view;
+	mat4 depth_light_projection;
 	vec3 lightPos;
 } ubo;
 
@@ -19,6 +21,7 @@ layout (location = 1) out vec3 outColor;
 layout (location = 2) out vec3 outViewVec;
 layout (location = 3) out vec3 outLightVec;
 layout (location = 4) out vec4 outShadowCoord;
+layout (location = 5) out vec2 outUV;
 
 out gl_PerVertex 
 {
@@ -35,6 +38,7 @@ void main()
 {
 	outColor = inColor;
 	outNormal = inNormal;
+	outUV = inUV;
 
 	gl_Position = ubo.projection * ubo.view * ubo.model * vec4(inPos.xyz, 1.0);
 	
@@ -43,5 +47,5 @@ void main()
     outLightVec = normalize(ubo.lightPos - inPos);
     outViewVec = -pos.xyz;			
 
-	outShadowCoord = ( biasMat * ubo.lightSpace * ubo.model ) * vec4(inPos, 1.0);	
+	outShadowCoord = ( biasMat * ubo.depth_light_projection * ubo.depth_light_view * ubo.depth_light_model * ubo.model ) * vec4(inPos, 1.0);	
 }
