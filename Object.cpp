@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <array>
+#include <iostream>
 
 static uint32_t findMemoryType(VkPhysicalDevice physical_device, uint32_t typeFilter, VkMemoryPropertyFlags properties) {
 	VkPhysicalDeviceMemoryProperties memProperties;
@@ -51,6 +52,11 @@ void Object::createUniformBuffer(VkDevice device, VkPhysicalDevice physical_devi
 	this->position.x = (float)(seed_gen() % 30);
 	this->position.y = (float)(seed_gen() % 30);
 	this->position.z = (float)(seed_gen() % 30);
+
+	this->velocity.x = (float)(seed_gen() % 100 / 100.0);
+	this->velocity.y = (float)(seed_gen() % 100 / 100.0);
+	this->velocity.z = (float)(seed_gen() % 100 / 100.0);
+
 	this->rotation.x = (float)(seed_gen() % 30);
 	this->rotation.y = (float)(seed_gen() % 30);
 	this->rotation.z = (float)(seed_gen() % 30);
@@ -80,13 +86,21 @@ void Object::createUniformBuffer(VkDevice device, VkPhysicalDevice physical_devi
 
 	vkBindBufferMemory(device, this->uniform_buffer, this->device_memory, 0);
 }
-void Object::updateUniformBuffer(VkDevice device, Camera camera, VkExtent2D swapchain_extent) {
+void Object::updateUniformBuffer(VkDevice device, float time, Camera camera, VkExtent2D swapchain_extent) {
+	this->position.x += this->velocity.x * 0.01f;
+	this->position.y += this->velocity.y * 0.01f;
+	this->position.z += this->velocity.z * 0.01f;
+	this->rotation.x += this->velocity.x * 0.001f;
+	this->rotation.y += this->velocity.y * 0.001f;
+	this->rotation.z += this->velocity.z * 0.001f;
+
+
 	UniformBufferObject ubo{};
 
-	auto translate = glm::translate(glm::mat4(1.0f), this->position);
-	auto rotate = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	//auto scale = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 2.0f, 1.0f));
-	ubo.model = translate * rotate;
+	ubo.model = glm::translate(glm::mat4(1.0f), this->position);
+	ubo.model = glm::rotate(ubo.model, glm::degrees(this->rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, glm::degrees(this->rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+	ubo.model = glm::rotate(ubo.model, glm::degrees(this->rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
 	ubo.view = glm::lookAt(camera.position, camera.target_position, glm::vec3(0.0f, 1.0f, 0.0f));
 	ubo.proj = glm::perspective(camera.fov, swapchain_extent.width / (float)swapchain_extent.height, camera.near_clip, camera.far_clip);
 

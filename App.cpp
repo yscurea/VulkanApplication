@@ -1156,6 +1156,8 @@ void App::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) 
 	this->endSingleTimeCommands(command_buffer);
 }
 
+float time = 0.0f;
+float dt = 0.01f;
 void App::createUniformBuffers() {
 	VkDeviceSize bufferSize = sizeof(UniformBufferObject);
 	for (auto& sphere : this->spheres) {
@@ -1165,8 +1167,9 @@ void App::createUniformBuffers() {
 
 }
 void App::updateUniformBuffers() {
-	for (auto sphere : this->spheres) {
-		sphere.updateUniformBuffer(this->device, this->camera, this->swapchain_extent);
+	time += dt;
+	for (auto& sphere : this->spheres) {
+		sphere.updateUniformBuffer(this->device, time, this->camera, this->swapchain_extent);
 	}
 }
 
