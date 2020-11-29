@@ -885,8 +885,8 @@ void App::createRenderPass() {
 	depth_attachment.format = findDepthFormat(this->physical_device);
 	depth_attachment.samples = this->sample_count_falg_bits;
 	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;//VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;//VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -1664,7 +1664,7 @@ void App::prepareCommand() {
 			render_pass_info.renderArea.extent = this->swapchain_extent;
 
 			std::array<VkClearValue, 2> clearValues{};
-			clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
+			clearValues[0].color = { 0.0f, 0.02f, 0.0f, 1.0f };
 			clearValues[1].depthStencil = { 1.0f, 0 };
 
 			render_pass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
@@ -1751,7 +1751,6 @@ void App::prepareDescriptor() {
 	this->createDescriptorSetLayout();
 	this->createDescriptorSets();
 }
-
 void App::deleteDescriptor() {
 	vkDestroyDescriptorSetLayout(this->device, this->descriptor_set_layout, nullptr);
 }

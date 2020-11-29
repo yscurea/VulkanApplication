@@ -62,6 +62,6 @@ void main()
 	vec3 R = normalize(-reflect(L, N));
 	vec3 diffuse = max(dot(N, L), ambient) * inColor;
 
-	// outFragColor = vec4(diffuse * shadow, 1.0);
-	outFragColor = texture(shadowMap,inUV);
+	outFragColor = vec4(diffuse * shadow, 1.0);
+	// outFragColor = texture(shadowMap,inUV);
 }
