@@ -280,6 +280,7 @@ void App::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	this->window = glfwCreateWindow(this->window_width, this->window_height, "Vulkan", nullptr, nullptr);
 	glfwSetWindowUserPointer(this->window, this);
 	glfwSetFramebufferSizeCallback(this->window, framebufferResizeCallback);
