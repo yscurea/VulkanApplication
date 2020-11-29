@@ -121,7 +121,15 @@ private:
 	bool framebuffer_resized = false;
 	void createSwapchainFrameBuffers();
 	void deleteSwapchainFrameBuffers();
+
 	// offscreen framebuffer
+	int offscreen_width = 2048;
+	int offscreen_height = 2048;
+	VkFramebuffer offscreen_framebuffer;
+	VkImage offscreen_image;
+	VkImageView offscreen_image_view;
+	VkDeviceMemory offscreen_device_memory;
+	VkSampler offscreen_sampler;
 	void createOffscreenFrameBuffer();
 	void deleteOffscreenFrameBuffer();
 
@@ -177,6 +185,7 @@ private:
 	VkPipeline graphics_pipeline;
 	void createGraphcisPipeline();
 
+	VkPipelineLayout offscreen_pipeline_layout;
 	VkPipeline offscreen_pipeline;
 	void createOffscreenPipeline();
 	void preparePipelines();
@@ -200,6 +209,7 @@ private:
 	// 頂点バッファ
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
+	// std::vector<glm::vec3> normals;
 	VkBuffer vertex_buffer;
 	VkDeviceMemory vertex_buffer_memory;
 	VkBuffer index_buffer;

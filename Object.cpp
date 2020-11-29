@@ -43,8 +43,8 @@ void Object::writeGraphicsDescriptorSets(VkDevice& device, VkDescriptorBufferInf
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(write_descriptor_sets.size()), write_descriptor_sets.data(), 0, nullptr);
 
 }
-void Object::writeOffscreenDescriptorSets(VkDevice& device, VkDescriptorBufferInfo* buffer_info, VkDescriptorImageInfo* image_info) {
-	std::array<VkWriteDescriptorSet, 2> write_descriptor_sets{};
+void Object::writeOffscreenDescriptorSets(VkDevice& device, VkDescriptorBufferInfo* buffer_info) {
+	std::array<VkWriteDescriptorSet, 1> write_descriptor_sets{};
 	// Binding 0: ユニフォームバッファ
 	write_descriptor_sets[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	write_descriptor_sets[0].dstSet = this->offscreen_descriptor_set;
@@ -53,16 +53,7 @@ void Object::writeOffscreenDescriptorSets(VkDevice& device, VkDescriptorBufferIn
 	write_descriptor_sets[0].pBufferInfo = buffer_info;
 	write_descriptor_sets[0].descriptorCount = 1;
 
-	// Binding 1: テクスチャサンプラー
-	write_descriptor_sets[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write_descriptor_sets[1].dstSet = this->offscreen_descriptor_set;
-	write_descriptor_sets[1].dstBinding = 1;
-	write_descriptor_sets[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	write_descriptor_sets[1].pImageInfo = image_info;
-	write_descriptor_sets[1].descriptorCount = 1;
-
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(write_descriptor_sets.size()), write_descriptor_sets.data(), 0, nullptr);
-
 }
 void Object::allocateGraphicsDescriptorSets(VkDevice& device, VkDescriptorSetAllocateInfo allocate_info) {
 	if (vkAllocateDescriptorSets(device, &allocate_info, &this->graphics_descriptor_set) != VK_SUCCESS) {
@@ -77,9 +68,9 @@ void Object::allocateOffscreenDescriptorSets(VkDevice& device, VkDescriptorSetAl
 
 void Object::createUniformBuffer(VkDevice device, VkPhysicalDevice physical_device) {
 	std::random_device seed_gen;
-	this->position.x = (float)(seed_gen() % 30);
-	this->position.y = (float)(seed_gen() % 30);
-	this->position.z = (float)(seed_gen() % 30);
+	this->position.x = (float)((seed_gen() % 30) - 0);
+	this->position.y = (float)((seed_gen() % 30) - 0);
+	this->position.z = (float)((seed_gen() % 30) - 0);
 	this->rotation.x = (float)(seed_gen() % 30);
 	this->rotation.y = (float)(seed_gen() % 30);
 	this->rotation.z = (float)(seed_gen() % 30);

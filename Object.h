@@ -30,8 +30,9 @@ public:
 	void bindGraphicsDescriptorSets(VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout);
 	void bindOffscreenDescriptorSets(VkCommandBuffer command_buffer, VkPipelineLayout pipeline_layout);
 
+	void writeDescriptorSets();
 	void writeGraphicsDescriptorSets(VkDevice& device, VkDescriptorBufferInfo* buffer_info, VkDescriptorImageInfo* image_info);
-	void writeOffscreenDescriptorSets(VkDevice& device, VkDescriptorBufferInfo* buffer_info, VkDescriptorImageInfo* image_info);
+	void writeOffscreenDescriptorSets(VkDevice& device, VkDescriptorBufferInfo* buffer_info);
 
 	void createUniformBuffer(VkDevice device, VkPhysicalDevice physical_device);
 	void createUniformBufferOffscreen(VkDevice device, VkPhysicalDevice physical_device);

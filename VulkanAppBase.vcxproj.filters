@@ -85,6 +85,12 @@
       <Filter>リソース ファイル\shaders</Filter>
     </None>
     <None Include="README.md" />
+    <None Include="shaders\offscreen_shader.frag">
+      <Filter>リソース ファイル\shaders</Filter>
+    </None>
+    <None Include="shaders\offscreen_shader.vert">
+      <Filter>リソース ファイル\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">

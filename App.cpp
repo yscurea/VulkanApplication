@@ -59,13 +59,6 @@ void App::run() {
 void App::prepare() {
 	this->loadModel();
 	this->spheres.resize(this->sphere_count);
-	this->createDescriptorSetLayout();
-
-	// パイプライン作成
-	this->preparePipelines();
-
-	// コマンドプール作成
-	this->createCommandPool();
 
 	this->createColorResources();
 	this->createDepthResources();
@@ -73,11 +66,19 @@ void App::prepare() {
 
 	this->createOffscreenFrameBuffer();
 
+	this->createDescriptorSetLayout();
+
+	// パイプライン作成
+	this->preparePipelines();
+
+	// コマンドプール作成
+	this->createCommandPool();
 	// 各種リソース作成
 	this->prepareTexture();
 	this->createVertexBuffer();
 	this->createIndexBuffer();
 	this->createUniformBuffers();
+	// this->updateUniformBufferOffscreen();
 
 
 	// デスクリプタ準備
@@ -544,6 +545,7 @@ void App::selectPhysicalDevice() {
 	DeviceQueueIndices indices = findDeviceQueue(this->physical_device);
 	this->graphics_queue_index = indices.graphics_queue_index.value();
 	this->present_queue_index = indices.present_queue_index.value();
+	// this->sample_count_falg_bits = VK_SAMPLE_COUNT_1_BIT;
 }
 void App::createLogicalDevice() {
 	std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
@@ -751,84 +753,60 @@ void App::deleteSwapchainFrameBuffers() {
 	}
 }
 void App::createOffscreenFrameBuffer() {
-	// todo : ここから再開
+	this->offscreen_width = 2048;
+	this->offscreen_height = 2048;
+	this->createImage(
+		this->offscreen_width,
+		this->offscreen_height,
+		1,
+		VK_SAMPLE_COUNT_1_BIT,
+		VK_FORMAT_D16_UNORM,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		this->offscreen_image,
+		this->offscreen_device_memory
+	);
+	this->offscreen_image_view = this->createImageView(
+		this->offscreen_image,
+		VK_FORMAT_D16_UNORM,
+		VK_IMAGE_ASPECT_DEPTH_BIT,
+		1
+	);
 
-	offscreen_pass.width = SHADOWMAP_DIM;
-	offscreen_pass.height = SHADOWMAP_DIM;
+	VkFormatProperties formatProps;
+	vkGetPhysicalDeviceFormatProperties(this->physical_device, VK_FORMAT_D16_UNORM, &formatProps);
+	auto tmp = formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+	VkFilter shadowmap_filter = tmp ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
 
-	// For shadow mapping we only need a depth attachment
-	VkImageCreateInfo image_create_info = vks::initializers::imageCreateInfo();
-	image_create_info.imageType = VK_IMAGE_TYPE_2D;
-	image_create_info.extent.width = offscreenPass.width;
-	image_create_info.extent.height = offscreenPass.height;
-	image_create_info.extent.depth = 1;
-	image_create_info.mipLevels = 1;
-	image_create_info.arrayLayers = 1;
-	image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-	image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
-	image_create_info.format = DEPTH_FORMAT;																// Depth stencil attachment
-	image_create_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;		// We will sample directly from the depth attachment for the shadow mapping
-	if (vkCreateImage(device, &image_create_info, nullptr, &offscreenPass.depth.image) != VK_SUCCESS) {
-		throw std::runtime_error("failed to creat image in creating offscreen render pass");
-	}
-
-	VkMemoryAllocateInfo memory_allocate_info = vks::initializers::memoryAllocateInfo();
-	VkMemoryRequirements memory_requirements;
-	vkGetImageMemoryRequirements(device, offscreenPass.depth.image, &memory_requirements);
-	memory_allocate_info.allocationSize = memory_requirements.size;
-	memory_allocate_info.memoryTypeIndex = vulkanDevice->getMemoryType(memory_requirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	if (vkAllocateMemory(this->device, &memory_allocate_info, nullptr, &offscreenPass.depth.mem) = VK_SUCCESS) {
-		throw std::runtime_error("failed to allocate memory in createOffscreenFrameBuffer");
-	}
-	if (vkBindImageMemory(this->device, offscreenPass.depth.image, offscreenPass.depth.mem, 0) = VK_SUCCESS) {
-		throw std::runtime_error("failed to bind memory in createOffscreenFrameBuffer");
-	}
-
-	VkImageViewCreateInfo depthStencilView = vks::initializers::imageViewCreateInfo();
-	depthStencilView.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	depthStencilView.format = DEPTH_FORMAT;
-	depthStencilView.subresourceRange = {};
-	depthStencilView.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-	depthStencilView.subresourceRange.baseMipLevel = 0;
-	depthStencilView.subresourceRange.levelCount = 1;
-	depthStencilView.subresourceRange.baseArrayLayer = 0;
-	depthStencilView.subresourceRange.layerCount = 1;
-	depthStencilView.image = offscreenPass.depth.image;
-	if (vkCreateImageView(device, &depthStencilView, nullptr, &offscreenPass.depth.view) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create image view in createOffscreenFrameBuffers");
-	}
-
-	VkFilter shadowmap_filter = vks::tools::formatIsFilterable(this->physical_device, DEPTH_FORMAT, VK_IMAGE_TILING_OPTIMAL) ?
-		DEFAULT_SHADOWMAP_FILTER :
-		VK_FILTER_NEAREST;
-	VkSamplerCreateInfo sampler = vks::initializers::samplerCreateInfo();
-	sampler.magFilter = shadowmap_filter;
-	sampler.minFilter = shadowmap_filter;
-	sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-	sampler.addressModeV = sampler.addressModeU;
-	sampler.addressModeW = sampler.addressModeU;
-	sampler.mipLodBias = 0.0f;
-	sampler.maxAnisotropy = 1.0f;
-	sampler.minLod = 0.0f;
-	sampler.maxLod = 1.0f;
-	sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-	if (vkCreateSampler(device, &sampler, nullptr, &offscreenPass.depthSampler) != VK_SUCCESS) {
+	VkSamplerCreateInfo sampler_create_info{};
+	sampler_create_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	sampler_create_info.magFilter = shadowmap_filter;
+	sampler_create_info.minFilter = shadowmap_filter;
+	sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	sampler_create_info.addressModeV = sampler_create_info.addressModeU;
+	sampler_create_info.addressModeW = sampler_create_info.addressModeU;
+	sampler_create_info.mipLodBias = 0.0f;
+	sampler_create_info.maxAnisotropy = 1.0f;
+	sampler_create_info.minLod = 0.0f;
+	sampler_create_info.maxLod = 1.0f;
+	sampler_create_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	if (vkCreateSampler(this->device, &sampler_create_info, nullptr, &this->offscreen_sampler) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create sampler in createOffscreenFrameBuffers");
 	}
 
 	this->createOffscreenRenderPass();
 
-	// Create frame buffer
-	VkFramebufferCreateInfo framebuffer_create_info = vks::initializers::framebufferCreateInfo();
-	framebuffer_create_info.renderPass = offscreenPass.renderPass;
+	VkFramebufferCreateInfo framebuffer_create_info{};
+	framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	framebuffer_create_info.renderPass = this->offscreen_render_pass;
 	framebuffer_create_info.attachmentCount = 1;
-	framebuffer_create_info.pAttachments = &offscreenPass.depth.view;
-	framebuffer_create_info.width = offscreenPass.width;
-	framebuffer_create_info.height = offscreenPass.height;
+	framebuffer_create_info.pAttachments = &this->offscreen_image_view;
+	framebuffer_create_info.width = this->offscreen_width;
+	framebuffer_create_info.height = this->offscreen_height;
 	framebuffer_create_info.layers = 1;
-
-	if (vkCreateFramebuffer(this->device, &framebuffer_create_info, nullptr, &offscreenPass.frameBuffer) != VK_SUCCESS) {
+	if (vkCreateFramebuffer(this->device, &framebuffer_create_info, nullptr, &this->offscreen_framebuffer) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create offscreen_framebuffer");
 	}
 }
@@ -988,6 +966,7 @@ void App::createOffscreenRenderPass() {
 	subpass.pDepthStencilAttachment = &depth_reference;
 
 	std::array<VkSubpassDependency, 2> dependencies;
+
 	dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependencies[0].dstSubpass = 0;
 	dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
@@ -995,6 +974,7 @@ void App::createOffscreenRenderPass() {
 	dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
 	dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 	dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
 	dependencies[1].srcSubpass = 0;
 	dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
 	dependencies[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
@@ -1025,6 +1005,15 @@ void App::deleteOffscreenRenderPass() {
 // ------------------------------ pipeline ------------------------------------
 
 void App::preparePipelines() {
+	// パイプラインレイアウト生成
+	VkPipelineLayoutCreateInfo pipeline_layout_info{};
+	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipeline_layout_info.setLayoutCount = 1;
+	pipeline_layout_info.pSetLayouts = &this->descriptor_set_layout;
+	if (vkCreatePipelineLayout(this->device, &pipeline_layout_info, nullptr, &this->pipeline_layout) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create pipeline layout!");
+	}
+
 	// shader module 作成
 	auto vert_shader_code = readFile("shaders/vert.spv");
 	auto frag_shader_code = readFile("shaders/frag.spv");
@@ -1035,7 +1024,7 @@ void App::preparePipelines() {
 	// フラグメントシェーダ
 	VkPipelineShaderStageCreateInfo frag_shader_stage_info = vulkan::utils::getShaderStageCreateInfo(frag_shader_module, VK_SHADER_STAGE_FRAGMENT_BIT);
 	// パイプラインのシェーダ全部を設定
-	VkPipelineShaderStageCreateInfo shader_stages[] = { vert_shader_stage_info, frag_shader_stage_info };
+	std::vector<VkPipelineShaderStageCreateInfo> shader_stages = { vert_shader_stage_info, frag_shader_stage_info };
 	// 頂点シェーダに渡すやつを設定する
 	VkPipelineVertexInputStateCreateInfo vertex_input_info{};
 	vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -1049,6 +1038,7 @@ void App::preparePipelines() {
 	VkPipelineInputAssemblyStateCreateInfo input_assembly{};
 	input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+	input_assembly.flags = 0;
 	input_assembly.primitiveRestartEnable = VK_FALSE;
 
 	VkViewport viewport{};
@@ -1067,9 +1057,10 @@ void App::preparePipelines() {
 	VkPipelineViewportStateCreateInfo viewport_state{};
 	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewport_state.viewportCount = 1;
-	viewport_state.pViewports = &viewport;
+	// viewport_state.pViewports = &viewport;
 	viewport_state.scissorCount = 1;
-	viewport_state.pScissors = &scissor;
+	// viewport_state.pScissors = &scissor;
+	viewport_state.flags = 0;
 
 	// ラスタライズの情報設定
 	VkPipelineRasterizationStateCreateInfo rasterizer{};
@@ -1081,21 +1072,24 @@ void App::preparePipelines() {
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
+	rasterizer.flags = 0;
 
 	// マルチサンプル情報設定
 	VkPipelineMultisampleStateCreateInfo multisampling{};
 	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	multisampling.sampleShadingEnable = VK_FALSE;
+	// multisampling.sampleShadingEnable = VK_FALSE;
 	multisampling.rasterizationSamples = this->sample_count_falg_bits;
+	multisampling.flags = 0;
 
 	// デプスステンシルの情報設定
 	VkPipelineDepthStencilStateCreateInfo depth_stencil{};
 	depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depth_stencil.depthTestEnable = VK_TRUE;
 	depth_stencil.depthWriteEnable = VK_TRUE;
-	depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
-	depth_stencil.depthBoundsTestEnable = VK_FALSE;
-	depth_stencil.stencilTestEnable = VK_FALSE;
+	depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+	depth_stencil.back.compareOp = VK_COMPARE_OP_ALWAYS;
+	//depth_stencil.depthBoundsTestEnable = VK_FALSE;
+	//depth_stencil.stencilTestEnable = VK_FALSE;
 
 	// パイプラインカラーブレンドアタッチメントの情報設定
 	VkPipelineColorBlendAttachmentState color_blend_attachment{};
@@ -1119,27 +1113,14 @@ void App::preparePipelines() {
 	VkPipelineDynamicStateCreateInfo pipeline_dynamic_state_create_info{};
 	pipeline_dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	pipeline_dynamic_state_create_info.pDynamicStates = dynamic_state.data();
-	pipeline_dynamic_state_create_info.dynamicStateCount = dynamic_state.size();
+	pipeline_dynamic_state_create_info.dynamicStateCount = static_cast<uint32_t>(dynamic_state.size());
 	pipeline_dynamic_state_create_info.flags = 0;
 
 
-	// パイプラインレイアウトの情報設定
-	VkPipelineLayoutCreateInfo pipeline_layout_info{};
-	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipeline_layout_info.setLayoutCount = 1;
-	pipeline_layout_info.pSetLayouts = &this->descriptor_set_layout;
-
-	// パイプラインレイアウト生成
-	if (vkCreatePipelineLayout(this->device, &pipeline_layout_info, nullptr, &this->pipeline_layout) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create pipeline layout!");
-	}
 
 	// グラフィックスパイプラインの情報を設定
 	VkGraphicsPipelineCreateInfo pipeline_create_info{};
 	pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipeline_create_info.stageCount = 2;
-	pipeline_create_info.pStages = shader_stages;
-	pipeline_create_info.pVertexInputState = &vertex_input_info;
 	pipeline_create_info.pInputAssemblyState = &input_assembly;
 	pipeline_create_info.pViewportState = &viewport_state;
 	pipeline_create_info.pRasterizationState = &rasterizer;
@@ -1149,8 +1130,12 @@ void App::preparePipelines() {
 	pipeline_create_info.pDynamicState = &pipeline_dynamic_state_create_info;
 	pipeline_create_info.layout = this->pipeline_layout;
 	pipeline_create_info.renderPass = this->render_pass;
+
+	pipeline_create_info.pVertexInputState = &vertex_input_info;
+	pipeline_create_info.stageCount = static_cast<uint32_t>(shader_stages.size());
+	pipeline_create_info.pStages = shader_stages.data();
 	pipeline_create_info.subpass = 0;
-	pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+	// pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
 
 	// グラフィックスパイプライン生成
 	if (vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &this->graphics_pipeline) != VK_SUCCESS) {
@@ -1163,38 +1148,32 @@ void App::preparePipelines() {
 
 
 
-	// ----------- offscreen
 
+	// Offscreen pipeline (vertex shader only)
+	vert_shader_code = readFile("shaders/offscreen_vert.spv");
+	vert_shader_module = createShaderModule(vert_shader_code);
+	VkPipelineShaderStageCreateInfo offscreen_vert_shader_stage_info = vulkan::utils::getShaderStageCreateInfo(vert_shader_module, VK_SHADER_STAGE_VERTEX_BIT);
+	shader_stages[0] = offscreen_vert_shader_stage_info;
 	pipeline_create_info.stageCount = 1;
-	std::vector<char> offscreen_vert_shader_code = readFile("shaders/offscreen_vert.spv");
-	VkShaderModule offscreen_vert_shader_module = createShaderModule(offscreen_vert_shader_code);
-	VkPipelineShaderStageCreateInfo offscreen_vert_shader_stage_info = vulkan::utils::getShaderStageCreateInfo(offscreen_vert_shader_module, VK_SHADER_STAGE_VERTEX_BIT);
-	shader_stages[0] = vert_shader_stage_info;
-
-	dynamic_state.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
-	pipeline_dynamic_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	pipeline_dynamic_state_create_info.pDynamicStates = dynamic_state.data();
-	pipeline_dynamic_state_create_info.dynamicStateCount = dynamic_state.size();
-	pipeline_dynamic_state_create_info.flags = 0;
-
+	// No blend attachment states (no color attachments used)
 	color_blending.attachmentCount = 0;
-
+	// Cull front faces
 	depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-
+	// Enable depth bias
 	rasterizer.depthBiasEnable = VK_TRUE;
 
-	// 動的に変更される可能性のあるものを指定する
-	std::vector<VkDynamicState> dynamic_state_enables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+	// Add depth bias to dynamic state, so we can change it at runtime
+	dynamic_state.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+	pipeline_dynamic_state_create_info.pDynamicStates = dynamic_state.data();
+	pipeline_dynamic_state_create_info.dynamicStateCount = static_cast<uint32_t>(dynamic_state.size());
+	pipeline_dynamic_state_create_info.flags = 0;
 
 	pipeline_create_info.renderPass = this->offscreen_render_pass;
-
-	if (vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &this->offscreen_pipeline)) {
-		throw std::runtime_error("failed to create offscreen graphics pipeline");
+	if (vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_create_info, nullptr, &this->offscreen_pipeline) != VK_SUCCESS) {
+		throw std::runtime_error("failed to create offscreen pipeline");
 	}
-
-	vkDestroyShaderModule(this->device, vert_shader_module, nullptr);
 }
-
 
 // ------------------------------ shader --------------------------------------------
 std::vector<char> App::readFile(const std::string& filename) {
@@ -1259,6 +1238,13 @@ void App::loadModel() {
 			};
 
 			vertex.color = { 1.0f, 1.0f, 1.0f };
+
+			vertex.normal = {
+				attrib.normals[3 * index.normal_index + 0],
+				attrib.normals[3 * index.normal_index + 1],
+				attrib.normals[3 * index.normal_index + 2]
+			};
+
 
 			if (uniqueVertices.count(vertex) == 0) {
 				uniqueVertices[vertex] = static_cast<uint32_t>(this->vertices.size());
@@ -1622,21 +1608,40 @@ void App::prepareCommand() {
 			VkRenderPassBeginInfo render_pass_info{};
 			render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			render_pass_info.renderPass = this->offscreen_render_pass;
-			// render_pass_info.framebuffer = this->swapchain_framebuffers[i];
+			render_pass_info.framebuffer = this->offscreen_framebuffer;
 			render_pass_info.renderArea.offset = { 0, 0 };
-			// render_pass_info.renderArea.extent = this->swapchain_extent;
-
-			std::array<VkClearValue, 2> clearValues{};
-			clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f };
-			clearValues[1].depthStencil = { 1.0f, 0 };
-
+			render_pass_info.renderArea.extent.height = this->offscreen_height;
+			render_pass_info.renderArea.extent.width = this->offscreen_width;
+			VkClearValue clear_values[1];
+			clear_values[0].depthStencil = { 1.0f, 0 };
 			render_pass_info.clearValueCount = 1;
-			// render_pass_info.pClearValues = clearValues.data();
+			render_pass_info.pClearValues = clear_values;
 
 			vkCmdBeginRenderPass(this->command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
+			VkViewport viewport{};
+			viewport.width = (float)this->offscreen_width;
+			viewport.height = (float)this->offscreen_height;
+			viewport.minDepth = 0.0f;
+			viewport.minDepth = 1.0f;
+			vkCmdSetViewport(this->command_buffers[i], 0, 1, &viewport);
+
+			VkRect2D scissor{};
+			scissor.extent.height = this->offscreen_height;
+			scissor.extent.width = this->offscreen_width;
+			scissor.offset.x = 0;
+			scissor.offset.y = 0;
+			vkCmdSetScissor(this->command_buffers[i], 0, 1, &scissor);
+
+			vkCmdSetDepthBias(
+				this->command_buffers[i],
+				1.25f,
+				0.0f,
+				1.75f
+			);
+
 			// 共通のパイプライン
-			vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
+			vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->offscreen_pipeline);
 
 			// 共通の頂点を使用する
 			VkBuffer vertexBuffers[] = { this->vertex_buffer };
@@ -1748,9 +1753,9 @@ void App::createDescriptorPool() {
 	// 描画する球体の数だけユニフォームバッファとテクスチャサンプラーが作成される可能性がある
 	std::array<VkDescriptorPoolSize, 2> pool_sizes{};
 	pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	pool_sizes[0].descriptorCount = static_cast<uint32_t>(this->sphere_count);
+	pool_sizes[0].descriptorCount = static_cast<uint32_t>(this->sphere_count) * 2;
 	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pool_sizes[1].descriptorCount = static_cast<uint32_t>(this->sphere_count);
+	pool_sizes[1].descriptorCount = static_cast<uint32_t>(this->sphere_count) * 2;
 
 	VkDescriptorPoolCreateInfo pool_info{};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1806,6 +1811,20 @@ void App::createDescriptorSets() {
 		image_info.sampler = this->texture_sampler;
 
 		sphere.writeGraphicsDescriptorSets(this->device, &buffer_info, &image_info);
+
+
+		//VkDescriptorSetAllocateInfo offscreen_allocate_info{};
+		//allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		//allocate_info.descriptorPool = this->descriptor_pool;
+		//allocate_info.descriptorSetCount = 1;
+		//allocate_info.pSetLayouts = &this->descriptor_set_layout;
+		sphere.allocateOffscreenDescriptorSets(this->device, allocate_info);
+
+		VkDescriptorBufferInfo offscreen_buffer_info{};
+		buffer_info.buffer = sphere.offscreen_uniform_buffer;
+		buffer_info.offset = 0;
+		buffer_info.range = sizeof(OffscreenUniformBufferObject);
+		sphere.writeOffscreenDescriptorSets(this->device, &buffer_info);
 	}
 }
 
