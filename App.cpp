@@ -63,7 +63,6 @@ void App::prepare() {
 	this->createColorResources();
 	this->createDepthResources();
 	this->createSwapchainFrameBuffers();
-
 	this->createOffscreenFrameBuffer();
 
 	this->createDescriptorSetLayout();
@@ -96,8 +95,8 @@ void App::render() {
 	uint32_t image_index;
 	VkResult result = vkAcquireNextImageKHR(this->device, this->swapchain, UINT64_MAX, this->image_available_semaphores[this->current_frame], VK_NULL_HANDLE, &image_index);
 
-	this->updateUniformBuffers();
 	this->updateUniformBufferOffscreen();
+	this->updateUniformBuffers();
 
 	VkSubmitInfo submit_info{};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -147,6 +146,7 @@ void App::render() {
 	this->current_frame = (this->current_frame + 1) % semaphore_size;
 }
 void App::cleanup() {
+	this->deleteOffscreenFrameBuffer();
 	this->deleteSwapchain();
 	this->deleteTexture();
 	this->deleteDescriptor();
@@ -283,6 +283,7 @@ void App::initWindow() {
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 	this->window = glfwCreateWindow(this->window_width, this->window_height, "Vulkan", nullptr, nullptr);
 	glfwSetWindowUserPointer(this->window, this);
 	glfwSetFramebufferSizeCallback(this->window, framebufferResizeCallback);
@@ -705,7 +706,7 @@ void App::deleteSwapchain() {
 
 	vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
 
-	for (auto sphere : this->spheres) {
+	for (auto& sphere : this->spheres) {
 		sphere.deleteUniformBuffer(this->device);
 	}
 
@@ -753,8 +754,8 @@ void App::deleteSwapchainFrameBuffers() {
 	}
 }
 void App::createOffscreenFrameBuffer() {
-	this->offscreen_width = 2048;
-	this->offscreen_height = 2048;
+	this->offscreen_width = this->swapchain_extent.width;
+	this->offscreen_height = this->swapchain_extent.height;
 	this->createImage(
 		this->offscreen_width,
 		this->offscreen_height,
@@ -811,6 +812,7 @@ void App::createOffscreenFrameBuffer() {
 	}
 }
 void App::deleteOffscreenFrameBuffer() {
+	vkDestroyFramebuffer(this->device, this->offscreen_framebuffer, nullptr);
 }
 void App::createColorResources() {
 	VkFormat colorFormat = swapchain_image_format;
@@ -830,9 +832,9 @@ void App::createDepthResources() {
 	this->depth_image_view = createImageView(this->depth_image, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 }
 void App::deleteDepthResources() {
-	vkDestroyImageView(device, depth_image_view, nullptr);
-	vkDestroyImage(device, depth_image, nullptr);
-	vkFreeMemory(device, depth_image_memory, nullptr);
+	vkDestroyImageView(this->device, this->depth_image_view, nullptr);
+	vkDestroyImage(this->device, this->depth_image, nullptr);
+	vkFreeMemory(this->device, this->depth_image_memory, nullptr);
 }
 void App::createSyncObjects() {
 	this->image_available_semaphores.resize(semaphore_size);
@@ -1019,13 +1021,9 @@ void App::preparePipelines() {
 	auto frag_shader_code = readFile("shaders/frag.spv");
 	VkShaderModule vert_shader_module = createShaderModule(vert_shader_code);
 	VkShaderModule frag_shader_module = createShaderModule(frag_shader_code);
-	// 頂点シェーダ
 	VkPipelineShaderStageCreateInfo vert_shader_stage_info = vulkan::utils::getShaderStageCreateInfo(vert_shader_module, VK_SHADER_STAGE_VERTEX_BIT);
-	// フラグメントシェーダ
 	VkPipelineShaderStageCreateInfo frag_shader_stage_info = vulkan::utils::getShaderStageCreateInfo(frag_shader_module, VK_SHADER_STAGE_FRAGMENT_BIT);
-	// パイプラインのシェーダ全部を設定
 	std::vector<VkPipelineShaderStageCreateInfo> shader_stages = { vert_shader_stage_info, frag_shader_stage_info };
-	// 頂点シェーダに渡すやつを設定する
 	VkPipelineVertexInputStateCreateInfo vertex_input_info{};
 	vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	auto binding_description = Vertex::getBindingDescription();
@@ -1057,10 +1055,9 @@ void App::preparePipelines() {
 	VkPipelineViewportStateCreateInfo viewport_state{};
 	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewport_state.viewportCount = 1;
-	// viewport_state.pViewports = &viewport;
+	viewport_state.pViewports = &viewport;
 	viewport_state.scissorCount = 1;
-	// viewport_state.pScissors = &scissor;
-	viewport_state.flags = 0;
+	viewport_state.pScissors = &scissor;
 
 	// ラスタライズの情報設定
 	VkPipelineRasterizationStateCreateInfo rasterizer{};
@@ -1072,24 +1069,21 @@ void App::preparePipelines() {
 	rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	rasterizer.depthBiasEnable = VK_FALSE;
-	rasterizer.flags = 0;
 
 	// マルチサンプル情報設定
 	VkPipelineMultisampleStateCreateInfo multisampling{};
 	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	// multisampling.sampleShadingEnable = VK_FALSE;
+	multisampling.sampleShadingEnable = VK_FALSE;
 	multisampling.rasterizationSamples = this->sample_count_falg_bits;
-	multisampling.flags = 0;
 
 	// デプスステンシルの情報設定
 	VkPipelineDepthStencilStateCreateInfo depth_stencil{};
 	depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	depth_stencil.depthTestEnable = VK_TRUE;
 	depth_stencil.depthWriteEnable = VK_TRUE;
-	depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-	depth_stencil.back.compareOp = VK_COMPARE_OP_ALWAYS;
-	//depth_stencil.depthBoundsTestEnable = VK_FALSE;
-	//depth_stencil.stencilTestEnable = VK_FALSE;
+	depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+	depth_stencil.depthBoundsTestEnable = VK_FALSE;
+	depth_stencil.stencilTestEnable = VK_FALSE;
 
 	// パイプラインカラーブレンドアタッチメントの情報設定
 	VkPipelineColorBlendAttachmentState color_blend_attachment{};
@@ -1128,14 +1122,13 @@ void App::preparePipelines() {
 	pipeline_create_info.pDepthStencilState = &depth_stencil;
 	pipeline_create_info.pColorBlendState = &color_blending;
 	pipeline_create_info.pDynamicState = &pipeline_dynamic_state_create_info;
-	pipeline_create_info.layout = this->pipeline_layout;
-	pipeline_create_info.renderPass = this->render_pass;
-
 	pipeline_create_info.pVertexInputState = &vertex_input_info;
 	pipeline_create_info.stageCount = static_cast<uint32_t>(shader_stages.size());
 	pipeline_create_info.pStages = shader_stages.data();
+	pipeline_create_info.layout = this->pipeline_layout;
+	pipeline_create_info.renderPass = this->render_pass;
 	pipeline_create_info.subpass = 0;
-	// pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
+	pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
 
 	// グラフィックスパイプライン生成
 	if (vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &this->graphics_pipeline) != VK_SUCCESS) {
@@ -1149,28 +1142,28 @@ void App::preparePipelines() {
 
 
 
-	// Offscreen pipeline (vertex shader only)
+	// Offscreen pipeline
 	vert_shader_code = readFile("shaders/offscreen_vert.spv");
 	vert_shader_module = createShaderModule(vert_shader_code);
 	VkPipelineShaderStageCreateInfo offscreen_vert_shader_stage_info = vulkan::utils::getShaderStageCreateInfo(vert_shader_module, VK_SHADER_STAGE_VERTEX_BIT);
 	shader_stages[0] = offscreen_vert_shader_stage_info;
 	pipeline_create_info.stageCount = 1;
-	// No blend attachment states (no color attachments used)
+
 	color_blending.attachmentCount = 0;
-	// Cull front faces
-	depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-	// Enable depth bias
+
+	depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+
 	rasterizer.depthBiasEnable = VK_TRUE;
 
 	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-	// Add depth bias to dynamic state, so we can change it at runtime
+
 	dynamic_state.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
 	pipeline_dynamic_state_create_info.pDynamicStates = dynamic_state.data();
 	pipeline_dynamic_state_create_info.dynamicStateCount = static_cast<uint32_t>(dynamic_state.size());
 	pipeline_dynamic_state_create_info.flags = 0;
 
 	pipeline_create_info.renderPass = this->offscreen_render_pass;
-	if (vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_create_info, nullptr, &this->offscreen_pipeline) != VK_SUCCESS) {
+	if (vkCreateGraphicsPipelines(this->device, nullptr, 1, &pipeline_create_info, nullptr, &this->offscreen_pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create offscreen pipeline");
 	}
 }
@@ -1321,12 +1314,12 @@ void App::createUniformBuffers() {
 
 }
 void App::updateUniformBuffers() {
-	for (auto sphere : this->spheres) {
-		sphere.updateUniformBuffer(this->device, this->camera, this->swapchain_extent);
+	for (auto& sphere : this->spheres) {
+		sphere.updateUniformBuffer(this->device, this->light, this->camera, this->swapchain_extent);
 	}
 }
 void App::updateUniformBufferOffscreen() {
-	for (auto sphere : this->spheres) {
+	for (auto& sphere : this->spheres) {
 		sphere.updateUniformBufferOffscreen(this->device, this->light, this->swapchain_extent);
 	}
 }
@@ -1591,6 +1584,8 @@ void App::deleteCommandBuffers() {
 	vkFreeCommandBuffers(this->device, this->command_pool, static_cast<uint32_t>(this->command_buffers.size()), this->command_buffers.data());
 }
 void App::prepareCommand() {
+	VkRect2D scissor{};
+	VkViewport viewport{};
 	for (size_t i = 0; i < this->command_buffers.size(); i++) {
 		VkCommandBufferBeginInfo begin_info{};
 		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -1619,14 +1614,12 @@ void App::prepareCommand() {
 
 			vkCmdBeginRenderPass(this->command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
-			VkViewport viewport{};
 			viewport.width = (float)this->offscreen_width;
 			viewport.height = (float)this->offscreen_height;
 			viewport.minDepth = 0.0f;
 			viewport.minDepth = 1.0f;
 			vkCmdSetViewport(this->command_buffers[i], 0, 1, &viewport);
 
-			VkRect2D scissor{};
 			scissor.extent.height = this->offscreen_height;
 			scissor.extent.width = this->offscreen_width;
 			scissor.offset.x = 0;
@@ -1679,6 +1672,19 @@ void App::prepareCommand() {
 
 			vkCmdBeginRenderPass(this->command_buffers[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
 
+			viewport.x = 0.0f;
+			viewport.y = (float)this->swapchain_extent.height;
+			viewport.width = (float)this->swapchain_extent.width;
+			viewport.height = -(float)this->swapchain_extent.height;
+			viewport.minDepth = 0.0f;
+			viewport.minDepth = 1.0f;
+			vkCmdSetViewport(this->command_buffers[i], 0, 1, &viewport);
+
+			scissor.extent = this->swapchain_extent;
+			scissor.offset.x = 0;
+			scissor.offset.y = 0;
+			vkCmdSetScissor(this->command_buffers[i], 0, 1, &scissor);
+
 			// 共通のパイプライン
 			vkCmdBindPipeline(this->command_buffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphics_pipeline);
 
@@ -1690,7 +1696,7 @@ void App::prepareCommand() {
 
 
 			// デスクリプタセットのみ各オブジェクト別に割り当てる
-			for (auto sphere : this->spheres) {
+			for (auto& sphere : this->spheres) {
 				sphere.bindGraphicsDescriptorSets(this->command_buffers[i], this->pipeline_layout);
 				vkCmdDrawIndexed(this->command_buffers[i], static_cast<uint32_t>(this->indices.size()), 1, 0, 0, 0);
 			}
