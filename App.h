@@ -185,7 +185,7 @@ private:
 	VkPipeline graphics_pipeline;
 	void createGraphcisPipeline();
 
-	VkPipelineLayout offscreen_pipeline_layout;
+	// VkPipelineLayout offscreen_pipeline_layout;
 	VkPipeline offscreen_pipeline;
 	void createOffscreenPipeline();
 	void preparePipelines();
@@ -241,6 +241,7 @@ private:
 
 	// ユニフォームバッファ（定数バッファ）
 	void createUniformBuffers();
+	void deleteUniformBuffers();
 	// void createUniformBufferOffscreen();
 	void updateUniformBuffers();
 	void updateUniformBufferOffscreen();

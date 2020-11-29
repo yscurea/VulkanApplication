@@ -40,6 +40,6 @@ public:
 	void updateUniformBuffer(VkDevice device, Light light, Camera camera, VkExtent2D swapchain_extent);
 	void updateUniformBufferOffscreen(VkDevice device, Light light, VkExtent2D swapchain_extent);
 
-	void deleteUniformBuffer(VkDevice device);
+	void deleteUniformBuffer(VkDevice& device);
 };
 

@@ -3,7 +3,7 @@
 // todo: ƒNƒ‰ƒXİŒv‚ÌŒ©’¼‚µ
 
 int main() {
-	uint32_t sphere_count = 300;
+	uint32_t sphere_count = 1000;
 	App* app = new App(sphere_count);
 	app->run();
 	return 0;

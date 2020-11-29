@@ -77,8 +77,6 @@ void App::prepare() {
 	this->createVertexBuffer();
 	this->createIndexBuffer();
 	this->createUniformBuffers();
-	// this->updateUniformBufferOffscreen();
-
 
 	// デスクリプタ準備
 	this->createDescriptorPool();
@@ -148,6 +146,7 @@ void App::render() {
 void App::cleanup() {
 	this->deleteOffscreenFrameBuffer();
 	this->deleteSwapchain();
+
 	this->deleteTexture();
 	this->deleteDescriptor();
 	this->deleteIndexBuffer();
@@ -697,11 +696,13 @@ void App::deleteSwapchain() {
 	vkFreeCommandBuffers(this->device, command_pool, static_cast<uint32_t>(this->command_buffers.size()), this->command_buffers.data());
 
 	vkDestroyPipeline(this->device, this->graphics_pipeline, nullptr);
+	vkDestroyPipeline(this->device, this->offscreen_pipeline, nullptr);
 	vkDestroyPipelineLayout(this->device, this->pipeline_layout, nullptr);
 	vkDestroyRenderPass(this->device, this->render_pass, nullptr);
+	vkDestroyRenderPass(this->device, this->offscreen_render_pass, nullptr);
 
 	for (auto imageView : this->swapchain_image_views) {
-		vkDestroyImageView(device, imageView, nullptr);
+		vkDestroyImageView(this->device, imageView, nullptr);
 	}
 
 	vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
@@ -754,8 +755,8 @@ void App::deleteSwapchainFrameBuffers() {
 	}
 }
 void App::createOffscreenFrameBuffer() {
-	this->offscreen_width = this->swapchain_extent.width;
-	this->offscreen_height = this->swapchain_extent.height;
+	this->offscreen_width = 2048;
+	this->offscreen_height = 2048;
 	this->createImage(
 		this->offscreen_width,
 		this->offscreen_height,
@@ -813,6 +814,10 @@ void App::createOffscreenFrameBuffer() {
 }
 void App::deleteOffscreenFrameBuffer() {
 	vkDestroyFramebuffer(this->device, this->offscreen_framebuffer, nullptr);
+	vkDestroySampler(this->device, this->offscreen_sampler, nullptr);
+	vkDestroyImageView(this->device, this->offscreen_image_view, nullptr);
+	vkDestroyImage(this->device, this->offscreen_image, nullptr);
+	vkFreeMemory(this->device, this->offscreen_device_memory, nullptr);
 }
 void App::createColorResources() {
 	VkFormat colorFormat = swapchain_image_format;
@@ -885,8 +890,8 @@ void App::createRenderPass() {
 	depth_attachment.format = findDepthFormat(this->physical_device);
 	depth_attachment.samples = this->sample_count_falg_bits;
 	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;//VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;//VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -1166,6 +1171,7 @@ void App::preparePipelines() {
 	if (vkCreateGraphicsPipelines(this->device, nullptr, 1, &pipeline_create_info, nullptr, &this->offscreen_pipeline) != VK_SUCCESS) {
 		throw std::runtime_error("failed to create offscreen pipeline");
 	}
+	vkDestroyShaderModule(this->device, vert_shader_module, nullptr);
 }
 
 // ------------------------------ shader --------------------------------------------
@@ -1312,6 +1318,11 @@ void App::createUniformBuffers() {
 		sphere.createUniformBufferOffscreen(this->device, this->physical_device);
 	}
 
+}
+void App::deleteUniformBuffers() {
+	for (auto& sphere : this->spheres) {
+		sphere.deleteUniformBuffer(this->device);
+	}
 }
 void App::updateUniformBuffers() {
 	for (auto& sphere : this->spheres) {
@@ -1617,7 +1628,7 @@ void App::prepareCommand() {
 			viewport.width = (float)this->offscreen_width;
 			viewport.height = (float)this->offscreen_height;
 			viewport.minDepth = 0.0f;
-			viewport.minDepth = 1.0f;
+			viewport.maxDepth = 1.0f;
 			vkCmdSetViewport(this->command_buffers[i], 0, 1, &viewport);
 
 			scissor.extent.height = this->offscreen_height;
@@ -1656,17 +1667,16 @@ void App::prepareCommand() {
 		{
 			// 2番目のパス : シーンレンダリング
 			// 普通に画面に出力するやつ
+			std::array<VkClearValue, 2> clearValues{};
+			clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1 };
+			clearValues[1].depthStencil = { 1.0f, 0 };
+
 			VkRenderPassBeginInfo render_pass_info{};
 			render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			render_pass_info.renderPass = this->render_pass;
 			render_pass_info.framebuffer = this->swapchain_framebuffers[i];
 			render_pass_info.renderArea.offset = { 0, 0 };
 			render_pass_info.renderArea.extent = this->swapchain_extent;
-
-			std::array<VkClearValue, 2> clearValues{};
-			clearValues[0].color = { 0.0f, 0.02f, 0.0f, 1.0f };
-			clearValues[1].depthStencil = { 1.0f, 0 };
-
 			render_pass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
 			render_pass_info.pClearValues = clearValues.data();
 
@@ -1677,7 +1687,7 @@ void App::prepareCommand() {
 			viewport.width = (float)this->swapchain_extent.width;
 			viewport.height = -(float)this->swapchain_extent.height;
 			viewport.minDepth = 0.0f;
-			viewport.minDepth = 1.0f;
+			viewport.maxDepth = 1.0f;
 			vkCmdSetViewport(this->command_buffers[i], 0, 1, &viewport);
 
 			scissor.extent = this->swapchain_extent;
