@@ -68,9 +68,14 @@ void Object::allocateOffscreenDescriptorSets(VkDevice& device, VkDescriptorSetAl
 
 void Object::createUniformBuffer(VkDevice device, VkPhysicalDevice physical_device) {
 	std::random_device seed_gen;
-	this->position.x = (float)((seed_gen() % 30) - 0);
-	this->position.y = (float)((seed_gen() % 30) - 0);
-	this->position.z = (float)((seed_gen() % 30) - 0);
+	this->position.x = (float)(seed_gen() % 30);
+	this->position.y = (float)(seed_gen() % 30);
+	this->position.z = (float)(seed_gen() % 30);
+
+	this->velocity.x = (float)(seed_gen() % 100 / 100.0);
+	this->velocity.y = (float)(seed_gen() % 100 / 100.0);
+	this->velocity.z = (float)(seed_gen() % 100 / 100.0);
+
 	this->rotation.x = (float)(seed_gen() % 30);
 	this->rotation.y = (float)(seed_gen() % 30);
 	this->rotation.z = (float)(seed_gen() % 30);
@@ -126,31 +131,38 @@ void Object::createUniformBufferOffscreen(VkDevice device, VkPhysicalDevice phys
 
 	vkBindBufferMemory(device, this->offscreen_uniform_buffer, this->offscreen_device_memory, 0);
 }
-void Object::updateUniformBuffer(VkDevice device, Camera camera, VkExtent2D swapchain_extent) {
+void Object::updateUniformBuffer(VkDevice device, Light light, Camera camera, VkExtent2D swapchain_extent) {
+	this->position.x += this->velocity.x * 0.01f;
+	this->position.y += this->velocity.y * 0.01f;
+	this->position.z += this->velocity.z * 0.01f;
+	this->rotation.x += this->velocity.x * 0.001f;
+	this->rotation.y += this->velocity.y * 0.001f;
+	this->rotation.z += this->velocity.z * 0.001f;
+
 	UniformBufferObject ubo{};
 
-	auto translate = glm::translate(glm::mat4(1.0f), this->position);
-	auto rotate = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.model = glm::translate(glm::mat4(1.0f), this->position);
+	// ubo.model = glm::rotate(ubo.model, this->rotation.z, glm::vec3(0.0f, 0.0f, 1.0f));
 	//auto scale = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 2.0f, 1.0f));
-	ubo.model = translate * rotate;
 	ubo.view = glm::lookAt(camera.position, camera.target_position, glm::vec3(0.0f, 1.0f, 0.0f));
-	ubo.proj = glm::perspective(camera.fov, swapchain_extent.width / (float)swapchain_extent.height, camera.near_clip, camera.far_clip);
-
+	ubo.projection = glm::perspective(camera.fov, swapchain_extent.width / (float)swapchain_extent.height, camera.near_clip, camera.far_clip);
+	ubo.light_position = light.position;
+	ubo.depth_light_model = this->oubo.model;
+	ubo.depth_light_view = this->oubo.view;
+	ubo.depth_light_projection = this->oubo.projection;
 	void* data;
 	vkMapMemory(device, this->device_memory, 0, sizeof(ubo), 0, &data);
 	memcpy(data, &ubo, sizeof(ubo));
 	vkUnmapMemory(device, this->device_memory);
 }
 void Object::updateUniformBufferOffscreen(VkDevice device, Light light, VkExtent2D swapchain_extent) {
-	OffscreenUniformBufferObject oubo{};
-
-	oubo.model = glm::mat4(1.0f);
-	oubo.view = glm::lookAt(light.position, glm::vec3(0.0f), glm::vec3(0, 1, 0));
-	oubo.projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 100.0f);
+	this->oubo.model = glm::mat4(1.0f);
+	this->oubo.view = glm::lookAt(light.position, glm::vec3(0.0f), glm::vec3(0, 1, 0));
+	this->oubo.projection = glm::perspective(glm::radians(45.0f), 1.0f, 1.0f, 100.0f);
 
 	void* data;
-	vkMapMemory(device, this->offscreen_device_memory, 0, sizeof(oubo), 0, &data);
-	memcpy(data, &oubo, sizeof(oubo));
+	vkMapMemory(device, this->offscreen_device_memory, 0, sizeof(this->oubo), 0, &data);
+	memcpy(data, &this->oubo, sizeof(this->oubo));
 	vkUnmapMemory(device, this->offscreen_device_memory);
 }
 void Object::deleteUniformBuffer(VkDevice device) {

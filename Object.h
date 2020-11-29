@@ -14,9 +14,10 @@
 #include "OffscreenUniformBufferObject.h"
 
 class Object {
-	// glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
+	glm::vec3 velocity = { 0.0f, 0.0f, 0.0f };
 	glm::vec3 position = { 0.0f, 0.0f, 0.0f };
 	glm::vec3 rotation = { 0.0f, 0.0f, 0.0f };
+	OffscreenUniformBufferObject oubo{};
 public:
 	VkDescriptorSet graphics_descriptor_set;
 	VkDescriptorSet offscreen_descriptor_set;
@@ -36,7 +37,7 @@ public:
 
 	void createUniformBuffer(VkDevice device, VkPhysicalDevice physical_device);
 	void createUniformBufferOffscreen(VkDevice device, VkPhysicalDevice physical_device);
-	void updateUniformBuffer(VkDevice device, Camera camera, VkExtent2D swapchain_extent);
+	void updateUniformBuffer(VkDevice device, Light light, Camera camera, VkExtent2D swapchain_extent);
 	void updateUniformBufferOffscreen(VkDevice device, Light light, VkExtent2D swapchain_extent);
 
 	void deleteUniformBuffer(VkDevice device);
