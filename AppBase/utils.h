@@ -2,13 +2,16 @@
 
 #include <vulkan/vulkan.h>
 
+#include <vector>
+#include <stdexcept>
+
 namespace vulkan::utils {
-	VkCommandBuffer beginSingleTimeCommands();
-	void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+	void checkError(VkResult result);
 
-	void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
-	void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+	namespace initializer {
+		VkApplicationInfo getApplicationInfo(const char* application_name);
+		VkInstanceCreateInfo getInstanceCreateInfo(VkApplicationInfo application_info, std::vector<const char*> extensions);
 
-
-	void createImage();
+		VkSwapchainCreateInfoKHR getSwapchainCreateInfoKHR();
+	}
 }
