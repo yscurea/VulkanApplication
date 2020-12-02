@@ -165,6 +165,7 @@
     <ClCompile Include="AppBase\Debug.cpp" />
     <ClCompile Include="AppBase\Device.cpp" />
     <ClCompile Include="AppBase\DeviceQueueIndices.cpp" />
+    <ClCompile Include="AppBase\Instance.cpp" />
     <ClCompile Include="AppBase\Mesh.cpp" />
     <ClCompile Include="AppBase\PhysicalDevice.cpp" />
     <ClCompile Include="AppBase\Surface.cpp" />
@@ -202,6 +203,7 @@
     <ClInclude Include="AppBase\Debug.h" />
     <ClInclude Include="AppBase\Device.h" />
     <ClInclude Include="AppBase\DeviceQueueIndices.h" />
+    <ClInclude Include="AppBase\Instance.h" />
     <ClInclude Include="AppBase\Mesh.h" />
     <ClInclude Include="AppBase\PhysicalDevice.h" />
     <ClInclude Include="AppBase\Surface.h" />

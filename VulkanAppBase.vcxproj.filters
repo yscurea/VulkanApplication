@@ -114,6 +114,9 @@
     <ClCompile Include="AppBase\PhysicalDevice.cpp">
       <Filter>ソース ファイル\AppBase</Filter>
     </ClCompile>
+    <ClCompile Include="AppBase\Instance.cpp">
+      <Filter>ソース ファイル\AppBase</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -208,6 +211,9 @@
       <Filter>ヘッダー ファイル\AppBase</Filter>
     </ClInclude>
     <ClInclude Include="AppBase\PhysicalDevice.h">
+      <Filter>ヘッダー ファイル\AppBase</Filter>
+    </ClInclude>
+    <ClInclude Include="AppBase\Instance.h">
       <Filter>ヘッダー ファイル\AppBase</Filter>
     </ClInclude>
   </ItemGroup>
