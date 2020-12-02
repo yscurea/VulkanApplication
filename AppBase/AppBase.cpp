@@ -17,10 +17,6 @@ namespace vulkan::base {
 		this->swapchain.createSwapchain();
 	}
 
-	void AppBase::renderLoop() {
-
-	}
-
 	void AppBase::cleanup() {
 
 	}

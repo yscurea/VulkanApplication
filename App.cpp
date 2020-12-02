@@ -287,7 +287,6 @@ void App::initWindow() {
 void App::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
 	auto app = reinterpret_cast<App*>(glfwGetWindowUserPointer(window));
 	app->framebuffer_resized = true;
-
 }
 void App::deleteWindow() {
 	glfwDestroyWindow(this->window);
@@ -351,8 +350,8 @@ void App::createInstance() {
 	create_info.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 	create_info.ppEnabledExtensionNames = extensions.data();
 
-	VkDebugUtilsMessengerCreateInfoEXT debug_create_info;
 #ifdef _DEBUG
+	VkDebugUtilsMessengerCreateInfoEXT debug_create_info;
 	create_info.enabledLayerCount = static_cast<uint32_t>(this->validation_layers.size());
 	create_info.ppEnabledLayerNames = this->validation_layers.data();
 	populateDebugMessengerCreateInfo(debug_create_info);

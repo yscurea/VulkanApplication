@@ -10,8 +10,7 @@ namespace vulkan::utils {
 
 	namespace initializer {
 		VkApplicationInfo getApplicationInfo(const char* application_name);
-		VkInstanceCreateInfo getInstanceCreateInfo(VkApplicationInfo application_info, std::vector<const char*> extensions);
-
+		VkInstanceCreateInfo getInstanceCreateInfo(VkApplicationInfo* application_info, std::vector<const char*> extensions);
 		VkSwapchainCreateInfoKHR getSwapchainCreateInfoKHR();
 	}
 }

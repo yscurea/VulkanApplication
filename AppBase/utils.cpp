@@ -160,7 +160,7 @@ namespace vulkan::utils {
 			app_info.apiVersion = VK_API_VERSION_1_2;
 			return app_info;
 		}
-		VkInstanceCreateInfo getInstanceCreateInfo(VkApplicationInfo application_info, std::vector<const char*> extensions) {
+		VkInstanceCreateInfo getInstanceCreateInfo(VkApplicationInfo* application_info, std::vector<const char*> extensions) {
 			VkInstanceCreateInfo create_info{};
 			create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			create_info.pApplicationInfo = &application_info;

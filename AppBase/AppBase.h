@@ -22,11 +22,8 @@ namespace vulkan::base {
 		Swapchain swapchain;
 
 		VkCommandPool command_pool;
-		void createCommandPool();
 	public:
 		void init();
-
-		virtual void renderLoop();
 
 		virtual void cleanup();
 	};
