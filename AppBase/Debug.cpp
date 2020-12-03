@@ -9,8 +9,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vulkan::base::debugCallback(VkDebugUtilsMessageSe
 }
 
 namespace vulkan::base {
-
-
 	VkDebugUtilsMessengerCreateInfoEXT getDebugUtilsMessengerCreateInfoEXT() {
 		VkDebugUtilsMessengerCreateInfoEXT create_info{};
 		create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -20,11 +18,38 @@ namespace vulkan::base {
 		return create_info;
 	}
 
-	void setupCreateInfo(VkInstanceCreateInfo* create_info) {
+	VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+		if (func != nullptr) {
+			return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+		}
+		else {
+			return VK_ERROR_EXTENSION_NOT_PRESENT;
+		}
+	}
+
+
+	void Debug::setupCreateInfo(VkInstanceCreateInfo* create_info) {
 		VkDebugUtilsMessengerCreateInfoEXT debug_create_info = getDebugUtilsMessengerCreateInfoEXT();
 		create_info->enabledLayerCount = static_cast<uint32_t>(this->validation_layers.size());
 		create_info->ppEnabledLayerNames = this->validation_layers.data();
-		populateDebugMessengerCreateInfo(debug_create_info);
 		create_info->pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debug_create_info;
+	}
+
+	void Debug::setupDebugMessenger(VkInstance& instance) {
+		VkDebugUtilsMessengerCreateInfoEXT create_info;
+		populateDebugMessengerCreateInfo(create_info);
+		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+
+		if (func != nullptr) {
+			return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+		}
+		else {
+			return VK_ERROR_EXTENSION_NOT_PRESENT;
+		}
+
+		if (CreateDebugUtilsMessengerEXT(this->instance, &create_info, nullptr, &this->debug_messenger) != VK_SUCCESS) {
+			throw std::runtime_error("failed to set up debug messenger!");
+		}
 	}
 }

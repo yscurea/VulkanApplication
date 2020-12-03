@@ -12,5 +12,6 @@ namespace vulkan::utils {
 		VkApplicationInfo getApplicationInfo(const char* application_name);
 		VkInstanceCreateInfo getInstanceCreateInfo(VkApplicationInfo* application_info, std::vector<const char*> extensions);
 		VkSwapchainCreateInfoKHR getSwapchainCreateInfoKHR();
+		VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
 	}
 }

@@ -11,7 +11,7 @@ namespace vulkan::base {
 		VkDebugUtilsMessengerEXT debug_messenger;
 		void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 	public:
-		void setupDebugMessenger();
+		void setupDebugMessenger(VkInstance& instance);
 		void deleteDebugMessenger();
 		bool checkValidationLayerSupport();
 		void setupCreateInfo(VkInstanceCreateInfo* create_info);
