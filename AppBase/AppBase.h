@@ -13,10 +13,7 @@ namespace vulkan::base {
 
 	// vulkanを使ったアプリのベース
 	class AppBase {
-		void connect(Window* window, Instance* instance, Debug* debug, Surface* surface, Device* device, Swapchain* swapchain);
-		Window window;
-		Instance instance;
-		Debug debug;
+		VkInstance instance;
 		Surface surface;
 		Device device;
 		Swapchain swapchain;
